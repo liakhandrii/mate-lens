@@ -98,19 +98,16 @@ class CameraManager: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
             return
         }
         
-        // Отримуємо дані фото у форматі JPEG
         guard let imageData = photo.fileDataRepresentation() else {
             DispatchQueue.main.async { [weak self] in self?.error = .noImageData }
             return
         }
         
-        // Створюємо UIImage з отриманих даних
         guard let image = UIImage(data: imageData) else {
             DispatchQueue.main.async { [weak self] in self?.error = .invalidImageData }
             return
         }
         
-        // Оновлюємо властивість capturedImage у головному потоці, щоб UI міг оновитися
         DispatchQueue.main.async { [weak self] in
             self?.capturedImage = image
         }
