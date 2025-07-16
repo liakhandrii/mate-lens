@@ -1,0 +1,656 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		F77E6A3AAE19A3B9D84D4618 /* Pods_MateCameraFix.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9FBC9081843B0643346CA65 /* Pods_MateCameraFix.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		F27DC6602E2683D50098F6E5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F27DC64A2E2683D40098F6E5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F27DC6512E2683D40098F6E5;
+			remoteInfo = MateCameraFix;
+		};
+		F27DC66A2E2683D50098F6E5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F27DC64A2E2683D40098F6E5 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F27DC6512E2683D40098F6E5;
+			remoteInfo = MateCameraFix;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		88D3D76621FEA1AFA753CBFD /* Pods-MateCameraFix.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MateCameraFix.release.xcconfig"; path = "Target Support Files/Pods-MateCameraFix/Pods-MateCameraFix.release.xcconfig"; sourceTree = "<group>"; };
+		8EB1D6FBE584EDBD7B88421E /* Pods-MateCameraFix.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MateCameraFix.debug.xcconfig"; path = "Target Support Files/Pods-MateCameraFix/Pods-MateCameraFix.debug.xcconfig"; sourceTree = "<group>"; };
+		A9FBC9081843B0643346CA65 /* Pods_MateCameraFix.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_MateCameraFix.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		F27DC6522E2683D40098F6E5 /* MateCameraFix.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MateCameraFix.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F27DC65F2E2683D50098F6E5 /* MateCameraFixTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MateCameraFixTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F27DC6692E2683D50098F6E5 /* MateCameraFixUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MateCameraFixUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		F27DC6542E2683D40098F6E5 /* MateCameraFix */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = MateCameraFix;
+			sourceTree = "<group>";
+		};
+		F27DC6622E2683D50098F6E5 /* MateCameraFixTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = MateCameraFixTests;
+			sourceTree = "<group>";
+		};
+		F27DC66C2E2683D50098F6E5 /* MateCameraFixUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			path = MateCameraFixUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F27DC64F2E2683D40098F6E5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F77E6A3AAE19A3B9D84D4618 /* Pods_MateCameraFix.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F27DC65C2E2683D50098F6E5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F27DC6662E2683D50098F6E5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		2805CFEE7C5FEA595D7DAFFD /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				8EB1D6FBE584EDBD7B88421E /* Pods-MateCameraFix.debug.xcconfig */,
+				88D3D76621FEA1AFA753CBFD /* Pods-MateCameraFix.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		EE59B2114B850C85145AD1E2 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A9FBC9081843B0643346CA65 /* Pods_MateCameraFix.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		F27DC6492E2683D40098F6E5 = {
+			isa = PBXGroup;
+			children = (
+				F27DC6542E2683D40098F6E5 /* MateCameraFix */,
+				F27DC6622E2683D50098F6E5 /* MateCameraFixTests */,
+				F27DC66C2E2683D50098F6E5 /* MateCameraFixUITests */,
+				F27DC6532E2683D40098F6E5 /* Products */,
+				2805CFEE7C5FEA595D7DAFFD /* Pods */,
+				EE59B2114B850C85145AD1E2 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		F27DC6532E2683D40098F6E5 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F27DC6522E2683D40098F6E5 /* MateCameraFix.app */,
+				F27DC65F2E2683D50098F6E5 /* MateCameraFixTests.xctest */,
+				F27DC6692E2683D50098F6E5 /* MateCameraFixUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F27DC6512E2683D40098F6E5 /* MateCameraFix */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F27DC6732E2683D50098F6E5 /* Build configuration list for PBXNativeTarget "MateCameraFix" */;
+			buildPhases = (
+				F543D5BDE7DC088DFD49206D /* [CP] Check Pods Manifest.lock */,
+				F27DC64E2E2683D40098F6E5 /* Sources */,
+				F27DC64F2E2683D40098F6E5 /* Frameworks */,
+				F27DC6502E2683D40098F6E5 /* Resources */,
+				A00DEF89771457CC98D6783F /* [CP] Embed Pods Frameworks */,
+				AF587A0104CAE64654408016 /* [CP] Copy Pods Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F27DC6542E2683D40098F6E5 /* MateCameraFix */,
+			);
+			name = MateCameraFix;
+			productName = MateCameraFix;
+			productReference = F27DC6522E2683D40098F6E5 /* MateCameraFix.app */;
+			productType = "com.apple.product-type.application";
+		};
+		F27DC65E2E2683D50098F6E5 /* MateCameraFixTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F27DC6762E2683D50098F6E5 /* Build configuration list for PBXNativeTarget "MateCameraFixTests" */;
+			buildPhases = (
+				F27DC65B2E2683D50098F6E5 /* Sources */,
+				F27DC65C2E2683D50098F6E5 /* Frameworks */,
+				F27DC65D2E2683D50098F6E5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F27DC6612E2683D50098F6E5 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F27DC6622E2683D50098F6E5 /* MateCameraFixTests */,
+			);
+			name = MateCameraFixTests;
+			productName = MateCameraFixTests;
+			productReference = F27DC65F2E2683D50098F6E5 /* MateCameraFixTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		F27DC6682E2683D50098F6E5 /* MateCameraFixUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F27DC6792E2683D50098F6E5 /* Build configuration list for PBXNativeTarget "MateCameraFixUITests" */;
+			buildPhases = (
+				F27DC6652E2683D50098F6E5 /* Sources */,
+				F27DC6662E2683D50098F6E5 /* Frameworks */,
+				F27DC6672E2683D50098F6E5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F27DC66B2E2683D50098F6E5 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				F27DC66C2E2683D50098F6E5 /* MateCameraFixUITests */,
+			);
+			name = MateCameraFixUITests;
+			productName = MateCameraFixUITests;
+			productReference = F27DC6692E2683D50098F6E5 /* MateCameraFixUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F27DC64A2E2683D40098F6E5 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1640;
+				TargetAttributes = {
+					F27DC6512E2683D40098F6E5 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					F27DC65E2E2683D50098F6E5 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = F27DC6512E2683D40098F6E5;
+					};
+					F27DC6682E2683D50098F6E5 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = F27DC6512E2683D40098F6E5;
+					};
+				};
+			};
+			buildConfigurationList = F27DC64D2E2683D40098F6E5 /* Build configuration list for PBXProject "MateCameraFix" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = F27DC6492E2683D40098F6E5;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F27DC6532E2683D40098F6E5 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F27DC6512E2683D40098F6E5 /* MateCameraFix */,
+				F27DC65E2E2683D50098F6E5 /* MateCameraFixTests */,
+				F27DC6682E2683D50098F6E5 /* MateCameraFixUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F27DC6502E2683D40098F6E5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F27DC65D2E2683D50098F6E5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F27DC6672E2683D50098F6E5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A00DEF89771457CC98D6783F /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-MateCameraFix/Pods-MateCameraFix-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-MateCameraFix/Pods-MateCameraFix-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-MateCameraFix/Pods-MateCameraFix-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		AF587A0104CAE64654408016 /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-MateCameraFix/Pods-MateCameraFix-resources-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-MateCameraFix/Pods-MateCameraFix-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-MateCameraFix/Pods-MateCameraFix-resources.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		F543D5BDE7DC088DFD49206D /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-MateCameraFix-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F27DC64E2E2683D40098F6E5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F27DC65B2E2683D50098F6E5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F27DC6652E2683D50098F6E5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F27DC6612E2683D50098F6E5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F27DC6512E2683D40098F6E5 /* MateCameraFix */;
+			targetProxy = F27DC6602E2683D50098F6E5 /* PBXContainerItemProxy */;
+		};
+		F27DC66B2E2683D50098F6E5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F27DC6512E2683D40098F6E5 /* MateCameraFix */;
+			targetProxy = F27DC66A2E2683D50098F6E5 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		F27DC6712E2683D50098F6E5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = ZYMHQ64QTU;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		F27DC6722E2683D50098F6E5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = ZYMHQ64QTU;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		F27DC6742E2683D50098F6E5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8EB1D6FBE584EDBD7B88421E /* Pods-MateCameraFix.debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZYMHQ64QTU;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Yaroslav.T.MateCameraFix;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F27DC6752E2683D50098F6E5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 88D3D76621FEA1AFA753CBFD /* Pods-MateCameraFix.release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZYMHQ64QTU;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs camera access";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Yaroslav.T.MateCameraFix;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		F27DC6772E2683D50098F6E5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZYMHQ64QTU;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Yaroslav.T.MateCameraFixTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MateCameraFix.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MateCameraFix";
+			};
+			name = Debug;
+		};
+		F27DC6782E2683D50098F6E5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZYMHQ64QTU;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Yaroslav.T.MateCameraFixTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MateCameraFix.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MateCameraFix";
+			};
+			name = Release;
+		};
+		F27DC67A2E2683D50098F6E5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZYMHQ64QTU;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Yaroslav.T.MateCameraFixUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = MateCameraFix;
+			};
+			name = Debug;
+		};
+		F27DC67B2E2683D50098F6E5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZYMHQ64QTU;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Yaroslav.T.MateCameraFixUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = MateCameraFix;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F27DC64D2E2683D40098F6E5 /* Build configuration list for PBXProject "MateCameraFix" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F27DC6712E2683D50098F6E5 /* Debug */,
+				F27DC6722E2683D50098F6E5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F27DC6732E2683D50098F6E5 /* Build configuration list for PBXNativeTarget "MateCameraFix" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F27DC6742E2683D50098F6E5 /* Debug */,
+				F27DC6752E2683D50098F6E5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F27DC6762E2683D50098F6E5 /* Build configuration list for PBXNativeTarget "MateCameraFixTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F27DC6772E2683D50098F6E5 /* Debug */,
+				F27DC6782E2683D50098F6E5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F27DC6792E2683D50098F6E5 /* Build configuration list for PBXNativeTarget "MateCameraFixUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F27DC67A2E2683D50098F6E5 /* Debug */,
+				F27DC67B2E2683D50098F6E5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = F27DC64A2E2683D40098F6E5 /* Project object */;
+}
