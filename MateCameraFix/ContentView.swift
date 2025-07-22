@@ -4,9 +4,10 @@ import MLKit
 struct ContentView: View {
     @StateObject private var cameraManager = CameraManager()
     @State private var showOverlay = false
-    @State private var recognizedText: [String] = []  // тут зберігаємо текст який знайшов ML Kit
+    @State private var textData: [WordData] = []
+    @State private var isProcessing = false
     
-    // тут всі розміри і відступи щоб не захаращувати код
+    // Розміри та відступи
     private enum Layout {
         static let captureButtonSize: CGFloat = 70
         static let captureButtonStrokeWidth: CGFloat = 2
@@ -18,12 +19,10 @@ struct ContentView: View {
         static let previewImagePadding: CGFloat = 16
         
         static let captureDelay: TimeInterval = 1.5
-        
-        static let angleThreshold: Double = 5
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 CameraView(cameraManager: cameraManager)
                     .ignoresSafeArea()
@@ -33,12 +32,14 @@ struct ContentView: View {
                     
                     Button(action: {
                         cameraManager.capturePhoto()
+                        isProcessing = true
                         
-                        // затримка і потім шукаємо текст на фото
+                        // Затримка для обробки фото
                         DispatchQueue.main.asyncAfter(deadline: .now() + Layout.captureDelay) {
                             if let image = cameraManager.capturedImage {
                                 recognizeText(in: image)
                             }
+                            isProcessing = false
                         }
                     }) {
                         Circle()
@@ -52,7 +53,7 @@ struct ContentView: View {
                     .padding(.bottom, Layout.captureButtonBottomPadding)
                 }
                 
-                // маленьке фото в кутку
+                // Маленьке фото в кутку
                 if let capturedImage = cameraManager.capturedImage {
                     VStack {
                         HStack {
@@ -68,22 +69,24 @@ struct ContentView: View {
                     }
                 }
                 
-                // невидимий лінк який веде на екран з текстом поверх фото
-                NavigationLink(
-                    destination: RealTextOverlayView(
-                        image: cameraManager.capturedImage,
-                        textList: recognizedText
-                    ),
-                    isActive: $showOverlay
-                ) {
-                    EmptyView()
+                // Індикатор завантаження
+                if isProcessing {
+                    ProgressView()
+                        .scaleEffect(2)
+                        .padding()
+                        .background(Color.white.opacity(0.8))
+                        .cornerRadius(10)
                 }
-                .hidden()
+            }
+            .navigationDestination(isPresented: $showOverlay) {
+                PositionedTextOverlayView(
+                    image: cameraManager.capturedImage,
+                    textData: textData
+                )
             }
         }
     }
     
-    // функція яка шукає текст на фото
     func recognizeText(in image: UIImage) {
         guard let normalizedImage = normalize(image: image) else {
             print("Failed to normalize image")
@@ -106,27 +109,29 @@ struct ContentView: View {
                 return
             }
 
-            // збираємо всі рядки тексту в масив
-            var textLines: [String] = []
+            var lineItems: [WordData] = []
             for block in result.blocks {
                 for line in block.lines {
-                    textLines.append(line.text)
-                    print("Found text: \(line.text)")
+                    let lineItem = WordData(
+                        text: line.text,
+                        frame: line.frame
+                    )
+                    lineItems.append(lineItem)
+                    print("Found line: \(line.text) at position: (\(line.frame.midX), \(line.frame.midY))")
                 }
             }
             
-            print("Total lines found: \(textLines.count)") // скільки всього рядків знайшли
+            print("Total lines found: \(lineItems.count)")
 
-            // оновлюємо UI в головному потоці
             DispatchQueue.main.async {
-                self.recognizedText = textLines
+                self.textData = lineItems
                 self.showOverlay = true
             }
         }
     }
 }
 
-// функція яка фіксить орієнтацію фото (бо камера може знімати під різними кутами)
+// Функція фіксації орієнтації фото
 func normalize(image: UIImage) -> UIImage? {
     guard image.imageOrientation != .up else { return image }
 
@@ -138,40 +143,103 @@ func normalize(image: UIImage) -> UIImage? {
     return UIGraphicsGetImageFromCurrentImageContext()
 }
 
-// екран де показуємо фото з текстом поверх
-struct RealTextOverlayView: View {
+
+// на майбутнє, щоб можна було робити фото не тільки в одному положенні
+//func visionImageOrientation(from imageOrientation: UIImage.Orientation) -> VisionImage.Orientation {
+//    switch imageOrientation {
+//    case .up:
+//        return .up
+//    case .down:
+//        return .down
+//    case .left:
+//        return .left
+//    case .right:
+//        return .right
+//    case .upMirrored:
+//        return .upMirrored
+//    case .downMirrored:
+//        return .downMirrored
+//    case .leftMirrored:
+//        return .leftMirrored
+//    case .rightMirrored:
+//        return .rightMirrored
+//    @unknown default:
+//        return .up
+//    }
+//}
+
+struct PositionedTextOverlayView: View {
     let image: UIImage?
-    let textList: [String]
+    let textData: [WordData]
+    
+    // Функція для обчислення масштабу та зміщень
+    func calculateScaleAndOffsets(imageSize: CGSize, screenSize: CGSize) -> (scale: CGFloat, offsetX: CGFloat, offsetY: CGFloat) {
+        let imageAspectRatio = imageSize.width / imageSize.height
+        let screenAspectRatio = screenSize.width / screenSize.height
+        
+        if imageAspectRatio > screenAspectRatio {
+            let scale = screenSize.width / imageSize.width
+            return (scale, 0, (screenSize.height - imageSize.height * scale) / 2)
+        } else {
+            let scale = screenSize.height / imageSize.height
+            return (scale, (screenSize.width - imageSize.width * scale) / 2, 0)
+        }
+    }
 
     var body: some View {
-        ZStack {
-            // спочатку показуємо саме фото
-            if let image = image {
-                Image(uiImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .ignoresSafeArea()
+        GeometryReader { geometry in
+            ZStack {
+                if let image = image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                    
+                    let transform = calculateScaleAndOffsets(
+                        imageSize: image.size,
+                        screenSize: geometry.size
+                    )
 
-                ForEach(Array(textList.enumerated()), id: \.offset) { index, text in
-                    Text(text)
-                        .font(.title2)
-                        .foregroundColor(.red)
-                        .background(Color.white.opacity(0.8))
-                        .padding(4)
-                        .position(
-                            x: CGFloat(100 + (index * 50) % 200),
-                            y: CGFloat(200 + (index * 80) % 300)
-                        )
+                    // Відображення тексту з врахуванням масштабу та розмірів
+                    ForEach(Array(textData.enumerated()), id: \.offset) { index, item in
+                        ZStack {
+                            // Червона рамка навколо тексту
+                            Rectangle()
+                                .stroke(Color.red, lineWidth: 2)
+                                .frame(width: item.frame.width * transform.scale, height: item.frame.height * transform.scale)
+                                .position(
+                                    x: item.frame.midX * transform.scale + transform.offsetX,
+                                    y: item.frame.midY * transform.scale + transform.offsetY
+                                )
+                            
+                            // Текст з білим фоном
+                            Text(item.text)
+                                .font(.system(size: item.frame.height * transform.scale * 0.8)) // Масштабування шрифту з коефіцієнтом
+                                .foregroundColor(.black) // Чорний текст
+                                .background(Color.white) // Суцільний білий фон
+                                .padding(4) // Відступи
+                                .cornerRadius(2) // Закруглені кути
+                                .position(
+                                    x: item.frame.midX * transform.scale + transform.offsetX,
+                                    y: item.frame.midY * transform.scale + transform.offsetY
+                                )
+                        }
+                    }
+                } else {
+                    Text("Photo not made")
                 }
-            } else {
-                Text("Фото не зроблено")
             }
         }
-        .navigationTitle("Real Text Overlay")
+        .ignoresSafeArea()
+        .navigationTitle("Positioned Text")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
 
+struct WordData {
+    let text: String
+    let frame: CGRect
+}
 
 /*
   
@@ -184,13 +252,12 @@ struct RealTextOverlayView: View {
   
  var text = result.text
  
-  цифри vs букви
+ // цифри vs букви
  text = text.replacingOccurrences(of: "0", with: "O")
  text = text.replacingOccurrences(of: "1", with: "l")
  text = text.replacingOccurrences(of: "5", with: "S")
  text = text.replacingOccurrences(of: "8", with: "B")
  
-  
  text = text.replacingOccurrences(of: "rn", with: "m")
  text = text.replacingOccurrences(of: "cl", with: "d")
  
