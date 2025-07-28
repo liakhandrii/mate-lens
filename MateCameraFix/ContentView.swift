@@ -7,6 +7,14 @@ struct ContentView: View {
     @State private var textData: [WordData] = []
     @State private var isProcessing = false
     
+    @State private var debugEnabled: Bool = false
+
+    #if DEBUG
+    private let drawDebugButton = true
+    #else
+    private let drawDebugButton = false
+    #endif
+        
     // Розміри та відступи
     private enum Layout {
         static let captureButtonSize: CGFloat = 70
@@ -31,26 +39,49 @@ struct ContentView: View {
                 VStack {
                     Spacer()
                     
-                    // Кнопка фото з обробкою
-                    Button(action: {
-                        cameraManager.capturePhoto()
-                        isProcessing = true
-                        
-                        // Затримка для обробки фото
-                        DispatchQueue.main.asyncAfter(deadline: .now() + Layout.captureDelay) {
-                            if let image = cameraManager.capturedImage {
-                                recognizeText(in: image)
+                    HStack(spacing: 30) {
+                        // DEBUG кнопка (тільки в DEBUG режимі)
+                        if drawDebugButton {
+                            Button(action: {
+                                debugEnabled.toggle()
+                            }) {
+                                Text("DEBUG")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(debugEnabled ? .black : .white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(debugEnabled ? Color.yellow : Color.black.opacity(0.6))
+                                    .cornerRadius(8)
                             }
-                            isProcessing = false
                         }
-                    }) {
-                        Circle()
-                            .fill(Color.white)
-                            .frame(width: Layout.captureButtonSize, height: Layout.captureButtonSize)
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.black.opacity(Layout.captureButtonStrokeOpacity), lineWidth: Layout.captureButtonStrokeWidth)
-                            )
+                        
+                        // Кнопка фото з обробкою
+                        Button(action: {
+                            cameraManager.capturePhoto()
+                            isProcessing = true
+                            
+                            // Затримка для обробки фото
+                            DispatchQueue.main.asyncAfter(deadline: .now() + Layout.captureDelay) {
+                                if let image = cameraManager.capturedImage {
+                                    recognizeText(in: image)
+                                }
+                                isProcessing = false
+                            }
+                        }) {
+                            Circle()
+                                .fill(Color.white)
+                                .frame(width: Layout.captureButtonSize, height: Layout.captureButtonSize)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.black.opacity(Layout.captureButtonStrokeOpacity), lineWidth: Layout.captureButtonStrokeWidth)
+                                )
+                        }
+                        
+                        // Spacer для симетрії, якщо DEBUG кнопка не показується
+                        if !drawDebugButton {
+                            Spacer()
+                                .frame(width: 60) // Приблизна ширина DEBUG кнопки
+                        }
                     }
                     .padding(.bottom, Layout.captureButtonBottomPadding)
                 }
@@ -83,7 +114,8 @@ struct ContentView: View {
             .navigationDestination(isPresented: $showOverlay) {
                 PositionedTextOverlayView(
                     image: cameraManager.capturedImage,
-                    textData: textData
+                    textData: textData,
+                    debugEnabled: debugEnabled
                 )
             }
         }
@@ -203,6 +235,7 @@ struct WordData {
 struct PositionedTextOverlayView: View {
     let image: UIImage?
     let textData: [WordData]
+    let debugEnabled: Bool
     
     var body: some View {
         GeometryReader { geometry in
@@ -218,7 +251,8 @@ struct PositionedTextOverlayView: View {
                     PerspectiveTextView(
                         textItems: textData,
                         imageSize: image.size,
-                        screenSize: geometry.size
+                        screenSize: geometry.size,
+                        debugEnabled: debugEnabled
                     )
                 } else {
                     Text("Photo not made")
@@ -236,60 +270,63 @@ struct PerspectiveTextView: UIViewRepresentable {
     let textItems: [WordData]
     let imageSize: CGSize
     let screenSize: CGSize
+    let debugEnabled: Bool
     
     func makeUIView(context: Context) -> TextDrawingView {
         let view = TextDrawingView()
         view.textItems = transformTextItems(textItems, imageSize: imageSize, screenSize: screenSize)
+        view.debugEnabled = debugEnabled
         return view
     }
     
     func updateUIView(_ uiView: TextDrawingView, context: Context) {
         uiView.textItems = transformTextItems(textItems, imageSize: imageSize, screenSize: screenSize)
+        uiView.debugEnabled = debugEnabled
         uiView.setNeedsDisplay()
     }
     
     // Перетворення текстових елементів для відображення
     private func transformTextItems(_ items: [WordData], imageSize: CGSize, screenSize: CGSize) -> [TransformedTextItem] {
-        return items.map { item in
+        return items.compactMap { item in
             let fontSize = calculateAdaptiveFontSize(for: item, imageSize: imageSize, screenSize: screenSize)
+            
+            // Створюємо debug інформацію з nil значеннями
+            let debugInfo = TextTransformDebug()
+            
+            let transformedPoints = item.cornerPoints!.map { transform($0, imageSize: imageSize, screenSize: screenSize) }
             
             if let cornerPoints = item.cornerPoints, cornerPoints.count == 4 {
                 // Трансформуємо точки в координати екрану
-                let transformedPoints = cornerPoints.map { transform($0, imageSize: imageSize, screenSize: screenSize) }
                 // Додаємо невелике розширення для кращого вигляду
                 let padding: CGFloat = 4
                 let expandedPoints = expandPolygon(transformedPoints, by: padding)
                 
+                // Заповнюємо debug інформацію
+                debugInfo.originalCornerPoints = transformedPoints
+                
+                // Трансформуємо frame до координат екрану
+                let (scale, offsetX, offsetY) = calculateScaleAndOffsets(imageSize: imageSize, screenSize: screenSize)
+                let transformedFrame = CGRect(
+                    x: item.frame.origin.x * scale + offsetX,
+                    y: item.frame.origin.y * scale + offsetY,
+                    width: item.frame.width * scale,
+                    height: item.frame.height * scale
+                )
+                debugInfo.calculatedTextFrame = transformedFrame
+                
+                debugInfo.transformedCornerPoints = expandedPoints
+                debugInfo.calculatedFontSize = fontSize
+                // calculatedRotationAngle буде заповнено пізніше в drawTextWithPerspective
+                
                 return TransformedTextItem(
                     text: item.text,
                     cornerPoints: expandedPoints,
-                    fontSize: fontSize
+                    fontSize: fontSize,
+                    debug: debugInfo
                 )
             } else {
-                // Використовуємо центр і розміри рамки
-                let (scale, offsetX, offsetY) = calculateScaleAndOffsets(imageSize: imageSize, screenSize: screenSize)
-                let center = CGPoint(
-                    x: item.frame.midX * scale + offsetX,
-                    y: item.frame.midY * scale + offsetY
-                )
-                let width = item.frame.width * scale + 16  // Більший відступ для кращого вигляду
-                let height = item.frame.height * scale + 12
-                
-                // Створюємо кутові точки прямокутника
-                let halfWidth = width / 2
-                let halfHeight = height / 2
-                let corners = [
-                    CGPoint(x: center.x - halfWidth, y: center.y - halfHeight),
-                    CGPoint(x: center.x + halfWidth, y: center.y - halfHeight),
-                    CGPoint(x: center.x + halfWidth, y: center.y + halfHeight),
-                    CGPoint(x: center.x - halfWidth, y: center.y + halfHeight)
-                ]
-                
-                return TransformedTextItem(
-                    text: item.text,
-                    cornerPoints: corners,
-                    fontSize: fontSize
-                )
+                // This is an impossible case, we can't draw text if it has no corners
+                return nil
             }
         }
     }
@@ -405,6 +442,22 @@ struct TransformedTextItem {
     let text: String
     let cornerPoints: [CGPoint]
     let fontSize: CGFloat
+    let debug: TextTransformDebug?
+}
+
+class TextTransformDebug {
+    /// Original corners as recognized by MLKit. Draws red
+    var originalCornerPoints: [CGPoint]?
+    /// Frame as calculated by recognizeText. Draws green
+    var calculatedTextFrame: CGRect?
+    /// Corners from the transformTextItems function. Draws yellow
+    var transformedCornerPoints: [CGPoint]?
+    /// Font size from calculateAdaptiveFontSize. Draws purple
+    var calculatedFontSize: CGFloat?
+    /// Angle from drawTextWithPerspective. Draws purple
+    var calculatedRotationAngle: CGFloat?
+    /// Text frame from drawTextWithPerspective. Draws blue
+    var calculatedTextRect: CGRect?
 }
 
 // MARK: - TextDrawingView для малювання тексту з перспективою
@@ -414,6 +467,8 @@ class TextDrawingView: UIView {
             setNeedsDisplay()
         }
     }
+    
+    var debugEnabled: Bool = false
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -448,8 +503,103 @@ class TextDrawingView: UIView {
             // Малювання тексту з перспективною трансформацією
             drawTextWithPerspective(context: context, item: item)
             
+            // Малювання debug інформації тільки якщо debug увімкнено
+            if debugEnabled, let debug = item.debug {
+                drawDebugInfo(context: context, debug: debug)
+            }
+            
             context.restoreGState()
         }
+    }
+    
+    // Функція для малювання debug інформації
+    private func drawDebugInfo(context: CGContext, debug: TextTransformDebug) {
+        context.saveGState()
+        context.setLineWidth(1.0)
+        
+        // Малюємо оригінальні кутові точки червоним кольором
+        if let originalPoints = debug.originalCornerPoints, originalPoints.count >= 4 {
+            context.setStrokeColor(UIColor.red.cgColor)
+            context.beginPath()
+            context.move(to: originalPoints[0])
+            for i in 1..<originalPoints.count {
+                context.addLine(to: originalPoints[i])
+            }
+            context.closePath()
+            context.strokePath()
+        }
+        
+        // Малюємо трансформовані кутові точки жовтим кольором
+        if let transformedPoints = debug.transformedCornerPoints, transformedPoints.count >= 4 {
+            context.setStrokeColor(UIColor.yellow.cgColor)
+            context.beginPath()
+            context.move(to: transformedPoints[0])
+            for i in 1..<transformedPoints.count {
+                context.addLine(to: transformedPoints[i])
+            }
+            context.closePath()
+            context.strokePath()
+        }
+        
+        // Малюємо текстовий прямокутник синім кольором
+        if let textRect = debug.calculatedTextRect,
+           let transformedPoints = debug.transformedCornerPoints, transformedPoints.count >= 4 {
+            let center = getCenterOfPoints(transformedPoints)
+            
+            // Трансформуємо textRect до правильних координат екрану
+            let actualTextRect = CGRect(
+                x: center.x + textRect.origin.x,
+                y: center.y + textRect.origin.y,
+                width: textRect.width,
+                height: textRect.height
+            )
+            
+            context.setStrokeColor(UIColor.blue.cgColor)
+            context.stroke(actualTextRect)
+        }
+        
+        // Малюємо calculatedTextFrame зеленим кольором
+        if let textFrame = debug.calculatedTextFrame {
+            context.setStrokeColor(UIColor.green.cgColor)
+            context.stroke(textFrame)
+        }
+        
+        // Показуємо кут повороту та розмір шрифту як синій текст під текстом
+        if let transformedPoints = debug.transformedCornerPoints, transformedPoints.count >= 4 {
+            let center = getCenterOfPoints(transformedPoints)
+            var debugTexts: [String] = []
+            
+            if let angle = debug.calculatedRotationAngle {
+                let angleInDegrees = angle * 180 / .pi
+                debugTexts.append(String(format: "%.1f°", angleInDegrees))
+            }
+            
+            if let fontSize = debug.calculatedFontSize {
+                debugTexts.append(String(format: "%.1fpt", fontSize))
+            }
+            
+            if !debugTexts.isEmpty {
+                let debugText = debugTexts.joined(separator: " | ")
+                
+                let attributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 12),
+                    .foregroundColor: UIColor.purple
+                ]
+                let attributedString = NSAttributedString(string: debugText, attributes: attributes)
+                let textSize = attributedString.size()
+                
+                let textRect = CGRect(
+                    x: center.x - textSize.width / 2,
+                    y: center.y + 10, // Під текстом
+                    width: textSize.width,
+                    height: textSize.height
+                )
+                
+                attributedString.draw(in: textRect)
+            }
+        }
+        
+        context.restoreGState()
     }
     
     // Функція для малювання тексту з урахуванням перспективи
@@ -489,6 +639,7 @@ class TextDrawingView: UIView {
             
             // Обчислюємо кут нахилу для тексту
             let angle = calculateRotationAngle(item.cornerPoints)
+            item.debug?.calculatedRotationAngle = angle
             context.rotate(by: angle)
             
             // Розміщуємо текст з урахуванням центрування і можливого переносу рядків
@@ -498,6 +649,7 @@ class TextDrawingView: UIView {
                 width: maxTextWidth,
                 height: textSize.height
             )
+            item.debug?.calculatedTextRect = textRect
             
             // Малюємо текст
             attributedString.draw(in: textRect)
@@ -512,6 +664,8 @@ class TextDrawingView: UIView {
                 width: maxTextWidth,
                 height: textSize.height
             )
+            
+            item.debug?.calculatedTextRect = textRect
             
             attributedString.draw(in: textRect)
         }
