@@ -123,7 +123,7 @@ struct ContentView: View {
     
     // MARK: - Функція розпізнавання тексту
     func recognizeText(in image: UIImage) {
-        guard let normalizedImage = normalize(image: image) else {
+        guard let normalizedImage = Utilities.normalize(image: image) else {
             print("Failed to normalize image")
             return
         }
@@ -147,7 +147,7 @@ struct ContentView: View {
             var lineItems: [WordData] = []
             for block in result.blocks {
                 for line in block.lines {
-                    let optimizedText = optimizeText(line.text)
+                    let optimizedText = Utilities.optimizeText(line.text)
                     let lineItem = WordData(
                         text: optimizedText,
                         frame: line.frame,
@@ -168,146 +168,6 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Enum для типів контенту
-enum ContentType {
-    case number
-    case date
-    case price
-    case productName
-    case regular
-    
-    var color: UIColor {
-        switch self {
-        case .number, .price:
-            return UIColor.black
-        case .date:
-            return UIColor.systemGreen
-        case .productName:
-            return UIColor.label
-        case .regular:
-            return UIColor.black
-        }
-    }
-    
-    var fontWeight: UIFont.Weight {
-        return .regular  // Однакова вага для всіх типів
-    }
-}
-
-// MARK: - Функція визначення типу контенту (глобальна)
-func detectContentType(for text: String) -> ContentType {
-    // Видаляємо пробіли для аналізу
-    let trimmedText = text.trimmingCharacters(in: .whitespaces)
-    
-    // Перевірка на ціну (містить цифри та символи валюти або слова типу EUR, USD)
-    let pricePattern = #"(?:€|$|£|¥|\b(?:EUR|USD|GBP|UAH)\b|\d+[.,]\d{2})"#
-    if let _ = trimmedText.range(of: pricePattern, options: .regularExpression) {
-        return .price
-    }
-    
-    // Перевірка на дату (різні формати)
-    let datePatterns = [
-        #"\d{1,2}[./\-]\d{1,2}[./\-]\d{2,4}"#,  // DD/MM/YYYY або MM/DD/YYYY
-        #"\d{4}[./\-]\d{1,2}[./\-]\d{1,2}"#,    // YYYY/MM/DD
-        #"\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4}"#
-    ]
-    for pattern in datePatterns {
-        if let _ = trimmedText.range(of: pattern, options: [.regularExpression, .caseInsensitive]) {
-            return .date
-        }
-    }
-    
-    let digitCount = trimmedText.filter { $0.isNumber }.count
-    let totalCount = trimmedText.count
-    if totalCount > 0 && Double(digitCount) / Double(totalCount) > 0.5 {
-        return .number
-    }
-    
-    // Перевірка на назву продукту (довші тексти з великої літери)
-    if trimmedText.count > 5 && trimmedText.first?.isUppercase == true {
-        // Додаткова перевірка на типові слова продуктів
-        let productKeywords = ["STÄBCHEN", "bevola", "Stück", "Pack", "Box", "Dose"]
-        for keyword in productKeywords {
-            if trimmedText.localizedCaseInsensitiveContains(keyword) {
-                return .productName
-            }
-        }
-    }
-    
-    return .regular
-}
-
-// MARK: - Функція вибору адаптивного шрифту (глобальна)
-func selectAdaptiveFont(for text: String, baseSize: CGFloat, contentType: ContentType) -> UIFont {
-    // Базовий шрифт залежно від розміру
-    let fontName: String
-    
-    if baseSize < 12 {
-        // Для дрібного тексту використовуємо чіткіший шрифт
-        fontName = "Helvetica Neue"
-    } else if baseSize < 20 {
-        // Для середнього тексту
-        fontName = "System"
-    } else {
-        // Для великого тексту
-        fontName = "System"
-    }
-    
-    if fontName == "System" {
-        return UIFont.systemFont(ofSize: baseSize, weight: contentType.fontWeight)
-    } else {
-        let helveticaVariant: String
-        switch contentType.fontWeight {
-        case .bold, .semibold:
-            helveticaVariant = "HelveticaNeue-Bold"
-        case .medium:
-            helveticaVariant = "HelveticaNeue-Medium"
-        default:
-            helveticaVariant = "HelveticaNeue"
-        }
-        
-        return UIFont(name: helveticaVariant, size: baseSize) ?? UIFont.systemFont(ofSize: baseSize, weight: contentType.fontWeight)
-    }
-}
-
-// MARK: - Допоміжні функції
-
-// Функція фіксації орієнтації фото
-func normalize(image: UIImage) -> UIImage? {
-    guard image.imageOrientation != .up else { return image }
-
-    UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
-    defer { UIGraphicsEndImageContext() }
-    
-    image.draw(in: CGRect(origin: .zero, size: image.size))
-    
-    return UIGraphicsGetImageFromCurrentImageContext()
-}
-
-// Функція корекції типових помилок розпізнавання
-func optimizeText(_ text: String) -> String {
-    var processed = text
-    
-    // Заміна типових помилок розпізнавання
-    let replacements = [
-        "0": "O", "1": "I", "5": "S", "8": "B",
-        "rn": "m", "cl": "d", "vv": "w",
-        "teh": "the", "adn": "and"
-    ]
-    
-    for (error, correction) in replacements {
-        processed = processed.replacingOccurrences(of: error, with: correction)
-    }
-    
-    return processed
-}
-
-// MARK: - Модель даних
-struct WordData {
-    let text: String
-    let frame: CGRect
-    let cornerPoints: [CGPoint]?
-}
 
 // MARK: - Представлення накладання тексту
 struct PositionedTextOverlayView: View {
@@ -323,7 +183,7 @@ struct PositionedTextOverlayView: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: geometry.size.width, height: geometry.size.height)
-                
+            
                     PerspectiveTextView(
                         textItems: textData,
                         imageSize: image.size,
@@ -365,7 +225,7 @@ struct PerspectiveTextView: UIViewRepresentable {
     private func transformTextItems(_ items: [WordData], imageSize: CGSize, screenSize: CGSize) -> [TransformedTextItem] {
         return items.compactMap { item in
             let fontSize = calculateAdaptiveFontSize(for: item, imageSize: imageSize, screenSize: screenSize)
-            let contentType = detectContentType(for: item.text)
+            let contentType = Utilities.detectContentType(for: item.text)
             
             let debugInfo = TextTransformDebug()
             
@@ -545,30 +405,6 @@ struct PerspectiveTextView: UIViewRepresentable {
     }
 }
 
-// Структура для передачі даних у TextDrawingView
-struct TransformedTextItem {
-    let text: String
-    let cornerPoints: [CGPoint]
-    let fontSize: CGFloat
-    let contentType: ContentType // Додано
-    let debug: TextTransformDebug?
-}
-
-class TextTransformDebug {
-    /// Original corners as recognized by MLKit. Draws red
-    var originalCornerPoints: [CGPoint]?
-    /// Frame as calculated by recognizeText. Draws green
-    var calculatedTextFrame: CGRect?
-    /// Corners from the transformTextItems function. Draws yellow
-    var transformedCornerPoints: [CGPoint]?
-    /// Font size from calculateAdaptiveFontSize. Draws purple
-    var calculatedFontSize: CGFloat?
-    /// Angle from drawTextWithPerspective. Draws purple
-    var calculatedRotationAngle: CGFloat?
-    /// Text frame from drawTextWithPerspective. Draws blue
-    var calculatedTextRect: CGRect?
-}
-
 // MARK: - TextDrawingView для малювання тексту з перспективою
 class TextDrawingView: UIView {
     var textItems: [TransformedTextItem] = [] {
@@ -716,10 +552,10 @@ class TextDrawingView: UIView {
         let areaWidth = getBoundingSize(for: item.cornerPoints).width
         
         // Визначаємо тип контенту, викликаючи глобальну функцію
-        let contentType = detectContentType(for: item.text)
+        let contentType = Utilities.detectContentType(for: item.text)
         
         // Вибираємо адаптивний шрифт, викликаючи глобальну функцію
-        let font = selectAdaptiveFont(for: item.text, baseSize: item.fontSize, contentType: contentType)
+        let font = Utilities.selectAdaptiveFont(for: item.text, baseSize: item.fontSize, contentType: contentType)
         
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
