@@ -221,7 +221,7 @@ struct PerspectiveTextView: UIViewRepresentable {
         uiView.setNeedsDisplay()
     }
     
-    // Перетворення текстових елементів для відображення
+    // Конвертуємо координати тексту для екрану
     private func transformTextItems(_ items: [WordData], imageSize: CGSize, screenSize: CGSize) -> [TransformedTextItem] {
         return items.compactMap { item in
             let fontSize = calculateAdaptiveFontSize(for: item, imageSize: imageSize, screenSize: screenSize)
@@ -232,7 +232,7 @@ struct PerspectiveTextView: UIViewRepresentable {
             let transformedPoints = item.cornerPoints!.map { transform($0, imageSize: imageSize, screenSize: screenSize) }
             
             if let cornerPoints = item.cornerPoints, cornerPoints.count == 4 {
-                let padding: CGFloat = 2
+                let padding: CGFloat = 4  // Збільшено для більшого простору
                 let expandedPoints = expandPolygon(transformedPoints, by: padding)
                 
                 debugInfo.originalCornerPoints = transformedPoints
@@ -262,7 +262,7 @@ struct PerspectiveTextView: UIViewRepresentable {
         }
     }
     
-    // Адаптивний розмір шрифту для різних текстових блоків
+    // Підбираємо розмір шрифту під блок
     private func calculateAdaptiveFontSize(for item: WordData, imageSize: CGSize, screenSize: CGSize) -> CGFloat {
         let (scale, _, _) = calculateScaleAndOffsets(imageSize: imageSize, screenSize: screenSize)
         
@@ -272,12 +272,12 @@ struct PerspectiveTextView: UIViewRepresentable {
         
         let transformedPoints = cornerPoints.map { transform($0, imageSize: imageSize, screenSize: screenSize) }
         
-        // Розраховуємо висоту більш точно
+        // Висота по лівій і правій стороні
         let leftHeight = distance(from: transformedPoints[0], to: transformedPoints[3])
         let rightHeight = distance(from: transformedPoints[1], to: transformedPoints[2])
         let avgHeight = (leftHeight + rightHeight) / 2.0
         
-        // Розраховуємо ширину
+        // Ширина зверху і знизу
         let topWidth = distance(from: transformedPoints[0], to: transformedPoints[1])
         let bottomWidth = distance(from: transformedPoints[3], to: transformedPoints[2])
         let avgWidth = (topWidth + bottomWidth) / 2.0
@@ -285,41 +285,43 @@ struct PerspectiveTextView: UIViewRepresentable {
         let textLength = item.text.count
         let widthHeightRatio = avgWidth / avgHeight
         
-        // Базовий коефіцієнт
-        var scaleFactor: CGFloat = 0.85  // Збільшено для кращого заповнення
+        // Базовий коефіцієнт - зменшено для кращого відображення
+        var scaleFactor: CGFloat = 0.7
         
-        // Спеціальна обробка для довгих текстів
-        if textLength > 12 {
-            scaleFactor = 0.6
+        // Довгі тексти потребують меншого шрифту
+        if textLength > 20 {
+            scaleFactor = 0.5
+        } else if textLength > 12 {
+            scaleFactor = 0.55
         } else if textLength > 10 && widthHeightRatio > 5.0 {
-            scaleFactor = 0.65
+            scaleFactor = 0.6
         } else if widthHeightRatio > 8.0 {
-            scaleFactor = 0.7
+            scaleFactor = 0.65
         } else if widthHeightRatio > 5.0 {
-            scaleFactor = 0.75
+            scaleFactor = 0.7
         } else if widthHeightRatio > 3.0 {
-            scaleFactor = 0.8
+            scaleFactor = 0.75
         }
         
-        // Корекція для коротких текстів
+        // Короткі тексти можуть бути більшими
         if textLength <= 3 {
-            scaleFactor *= 1.2
-        } else if textLength <= 5 {
             scaleFactor *= 1.1
+        } else if textLength <= 5 {
+            scaleFactor *= 1.05
         }
         
         let fontSize = avgHeight * scaleFactor
         return max(fontSize, 8.0)
     }
     
-    // Допоміжна функція для розрахунку відстані між точками
+    // Відстань між точками
     private func distance(from point1: CGPoint, to point2: CGPoint) -> CGFloat {
         let dx = point2.x - point1.x
         let dy = point2.y - point1.y
         return sqrt(dx * dx + dy * dy)
     }
     
-    // Розширення багатокутника для кращого покриття тексту
+    // Збільшуємо полігон щоб покрив весь текст
     private func expandPolygon(_ points: [CGPoint], by padding: CGFloat) -> [CGPoint] {
         guard points.count >= 3 else { return points }
         
@@ -332,7 +334,9 @@ struct PerspectiveTextView: UIViewRepresentable {
             
             if distance < 0.0001 { return point }
             
-            let scale = (distance + padding) / distance
+            // Адаптивне розширення залежно від розміру
+            let adaptivePadding = padding * 1.5
+            let scale = (distance + adaptivePadding) / distance
             return CGPoint(
                 x: center.x + dx * scale,
                 y: center.y + dy * scale
@@ -340,7 +344,7 @@ struct PerspectiveTextView: UIViewRepresentable {
         }
     }
     
-    // Удосконалений метод центрування для нерівномірних многокутників
+    // Знаходимо центр полігону (працює краще для неправильних форм)
     private func improvedCenterOf(_ points: [CGPoint]) -> CGPoint {
         guard points.count >= 3 else {
             let xs = points.map { $0.x }
@@ -349,7 +353,7 @@ struct PerspectiveTextView: UIViewRepresentable {
         }
         
         if points.count == 4 {
-            // Спеціальна обробка для чотирикутників (використання перетину діагоналей)
+            // Для чотирикутників - перетин діагоналей
             let p1 = points[0]
             let p2 = points[2]
             let p3 = points[1]
@@ -358,7 +362,7 @@ struct PerspectiveTextView: UIViewRepresentable {
             let d = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x)
             
             if abs(d) < 0.000001 {
-                // Запобігання діленню на нуль
+                // Якщо діагоналі паралельні
                 return CGPoint(
                     x: (p1.x + p2.x + p3.x + p4.x) / 4.0,
                     y: (p1.y + p2.y + p3.y + p4.y) / 4.0
@@ -373,29 +377,29 @@ struct PerspectiveTextView: UIViewRepresentable {
             )
         }
         
-        // Загальний випадок - використання середніх значень
+        // Інакше просто середнє
         let xs = points.map { $0.x }
         let ys = points.map { $0.y }
         return CGPoint(x: xs.reduce(0, +) / CGFloat(xs.count), y: ys.reduce(0, +) / CGFloat(ys.count))
     }
     
-    // Розрахунок масштабу та зміщення для коректного відображення на екрані
+    // Масштаб і зміщення для fit на екрані
     private func calculateScaleAndOffsets(imageSize: CGSize, screenSize: CGSize) -> (scale: CGFloat, offsetX: CGFloat, offsetY: CGFloat) {
         let imageAspectRatio = imageSize.width / imageSize.height
         let screenAspectRatio = screenSize.width / screenSize.height
         
         if imageAspectRatio > screenAspectRatio {
-            // Зображення ширше відносно екрану
+            // Картинка ширша
             let scale = screenSize.width / imageSize.width
             return (scale, 0, (screenSize.height - imageSize.height * scale) / 2)
         } else {
-            // Зображення вище відносно екрану
+            // Картинка вища
             let scale = screenSize.height / imageSize.height
             return (scale, (screenSize.width - imageSize.width * scale) / 2, 0)
         }
     }
     
-    // Трансформація координат із системи зображення в систему екрану
+    // Конвертуємо точку з координат картинки в координати екрану
     private func transform(_ point: CGPoint, imageSize: CGSize, screenSize: CGSize) -> CGPoint {
         let (scale, offsetX, offsetY) = calculateScaleAndOffsets(imageSize: imageSize, screenSize: screenSize)
         return CGPoint(
@@ -434,7 +438,7 @@ class TextDrawingView: UIView {
             context.setStrokeColor(UIColor.gray.withAlphaComponent(0.3).cgColor)
             context.setLineWidth(0.5)
             
-            // Створюємо і заповнюємо шлях
+            // Малюємо фон
             context.beginPath()
             if item.cornerPoints.count >= 4 {
                 context.move(to: item.cornerPoints[0])
@@ -445,10 +449,10 @@ class TextDrawingView: UIView {
                 context.drawPath(using: .fillStroke)
             }
             
-            // Малювання тексту з перспективною трансформацією
+            // Текст з поворотом
             drawTextWithPerspective(context: context, item: item)
             
-            // Малювання debug інформації тільки якщо debug увімкнено
+            // Debug режим
             if debugEnabled, let debug = item.debug {
                 drawDebugInfo(context: context, debug: debug)
             }
@@ -457,12 +461,12 @@ class TextDrawingView: UIView {
         }
     }
     
-    // Функція для малювання debug інформації
+    // Debug малювання
     private func drawDebugInfo(context: CGContext, debug: TextTransformDebug) {
         context.saveGState()
         context.setLineWidth(1.0)
         
-        // Малюємо оригінальні кутові точки червоним кольором
+        // Оригінальні точки - червоні
         if let originalPoints = debug.originalCornerPoints, originalPoints.count >= 4 {
             context.setStrokeColor(UIColor.red.cgColor)
             context.beginPath()
@@ -474,7 +478,7 @@ class TextDrawingView: UIView {
             context.strokePath()
         }
         
-        // Малюємо трансформовані кутові точки жовтим кольором
+        // Розширені точки - жовті
         if let transformedPoints = debug.transformedCornerPoints, transformedPoints.count >= 4 {
             context.setStrokeColor(UIColor.yellow.cgColor)
             context.beginPath()
@@ -486,12 +490,12 @@ class TextDrawingView: UIView {
             context.strokePath()
         }
         
-        // Малюємо текстовий прямокутник синім кольором
+        // Рамка тексту - синя
         if let textRect = debug.calculatedTextRect,
             let transformedPoints = debug.transformedCornerPoints, transformedPoints.count >= 4 {
             let center = getCenterOfPoints(transformedPoints)
             
-            // Трансформуємо textRect до правильних координат екрану
+            // Позиція рамки на екрані
             let actualTextRect = CGRect(
                 x: center.x + textRect.origin.x,
                 y: center.y + textRect.origin.y,
@@ -503,13 +507,13 @@ class TextDrawingView: UIView {
             context.stroke(actualTextRect)
         }
         
-        // Малюємо calculatedTextFrame зеленим кольором
+        // Frame з MLKit - зелений
         if let textFrame = debug.calculatedTextFrame {
             context.setStrokeColor(UIColor.green.cgColor)
             context.stroke(textFrame)
         }
         
-        // Показуємо кут повороту та розмір шрифту як синій текст під текстом
+        // Debug інфа: кут і розмір шрифту
         if let transformedPoints = debug.transformedCornerPoints, transformedPoints.count >= 4 {
             let center = getCenterOfPoints(transformedPoints)
             var debugTexts: [String] = []
@@ -549,27 +553,34 @@ class TextDrawingView: UIView {
     
     private func drawTextWithPerspective(context: CGContext, item: TransformedTextItem) {
         let center = getCenterOfPoints(item.cornerPoints)
-        let areaWidth = getBoundingSize(for: item.cornerPoints).width
+        let areaSize = getBoundingSize(for: item.cornerPoints)
+        let areaWidth = areaSize.width
+        let areaHeight = areaSize.height
         
-        // Визначаємо тип контенту, викликаючи глобальну функцію
+        // Тип контенту
         let contentType = Utilities.detectContentType(for: item.text)
         
-        // Вибираємо адаптивний шрифт, викликаючи глобальну функцію
+        // Підбір шрифту
         let font = Utilities.selectAdaptiveFont(for: item.text, baseSize: item.fontSize, contentType: contentType)
         
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
-        paragraphStyle.lineBreakMode = .byClipping  // Змінено з .byTruncatingTail
-        paragraphStyle.lineHeightMultiple = 0.9  // Зменшує відстань між рядками
+        paragraphStyle.lineBreakMode = .byTruncatingTail  // Змінено назад для коротких текстів
+        paragraphStyle.lineHeightMultiple = 0.85  // Трохи збільшено
         
-        // Атрибути з адаптивним шрифтом та кольором
+        // Довгі тексти - з переносами
+        if item.text.count > 15 {
+            paragraphStyle.lineBreakMode = .byWordWrapping
+        }
+        
+        // Атрибути тексту
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: contentType.color,
             .paragraphStyle: paragraphStyle
         ]
         
-        // Для важливої інформації додаємо тінь для кращої читабельності
+        // Для важливої інфо додаємо тінь
         var enhancedAttributes = attributes
         if contentType == .price || contentType == .date || contentType == .number {
             let shadow = NSShadow()
@@ -580,7 +591,31 @@ class TextDrawingView: UIView {
         }
         
         let attributedString = NSAttributedString(string: item.text, attributes: enhancedAttributes)
-        let textSize = attributedString.size()
+        
+        // Максимальна ширина залежить від форми області
+        let heightToWidthRatio = areaHeight / areaWidth
+        var widthMultiplier: CGFloat = 0.9  // Збільшено базовий множник
+        
+        if heightToWidthRatio < 0.2 { // Вузька смужка
+            widthMultiplier = 0.75
+        } else if heightToWidthRatio < 0.3 {
+            widthMultiplier = 0.8
+        } else if heightToWidthRatio < 0.4 {
+            widthMultiplier = 0.85
+        }
+        
+        // Короткі тексти можуть займати більше місця
+        if item.text.count <= 10 {
+            widthMultiplier = min(widthMultiplier * 1.1, 0.95)
+        }
+        
+        let maxWidth = areaWidth * widthMultiplier
+        let boundingRect = attributedString.boundingRect(
+            with: CGSize(width: maxWidth, height: areaHeight * 0.9),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let textSize = boundingRect.size
         
         if item.cornerPoints.count == 4 {
             context.saveGState()
@@ -592,14 +627,11 @@ class TextDrawingView: UIView {
             item.debug?.calculatedRotationAngle = angle
             context.rotate(by: angle)
             
-            // Використовуємо 100% ширини для довгих текстів
-            let maxTextWidth = item.text.count > 10 ? areaWidth : areaWidth * 0.95
-            let textWidth = min(textSize.width, maxTextWidth)
-            
+            // Позиція тексту
             let textRect = CGRect(
-                x: -textWidth / 2,
+                x: -textSize.width / 2,
                 y: -textSize.height / 2,
-                width: textWidth,
+                width: textSize.width,
                 height: textSize.height
             )
             item.debug?.calculatedTextRect = textRect
@@ -608,13 +640,10 @@ class TextDrawingView: UIView {
             
             context.restoreGState()
         } else {
-            let maxTextWidth = areaWidth * 0.98
-            let textWidth = min(textSize.width, maxTextWidth)
-            
             let textRect = CGRect(
-                x: center.x - textWidth / 2,
+                x: center.x - textSize.width / 2,
                 y: center.y - textSize.height / 2,
-                width: textWidth,
+                width: textSize.width,
                 height: textSize.height
             )
             
@@ -624,23 +653,24 @@ class TextDrawingView: UIView {
         }
     }
     
-    // Обчислення кута повороту на основі точок чотирикутника
+    // Кут нахилу тексту
     private func calculateRotationAngle(_ points: [CGPoint]) -> CGFloat {
         guard points.count >= 4 else { return 0 }
         
-        // Обчислюємо кут на основі обох горизонтальних ліній
+        // Кут верхньої лінії
         let topDx = points[1].x - points[0].x
         let topDy = points[1].y - points[0].y
         let topAngle = atan2(topDy, topDx)
         
+        // Кут нижньої лінії
         let bottomDx = points[2].x - points[3].x
         let bottomDy = points[2].y - points[3].y
         let bottomAngle = atan2(bottomDy, bottomDx)
         
-        // Використовуємо середнє значення для більшої стабільності
+        // Середній кут
         var angle = (topAngle + bottomAngle) / 2.0
         
-        // Нормалізуємо кут
+        // Нормалізація (щоб текст не був догори ногами)
         while angle > .pi / 4 {
             angle -= .pi
         }
@@ -651,7 +681,7 @@ class TextDrawingView: UIView {
         return angle
     }
     
-    // Отримання розміру обмежуючого прямокутника
+    // Розмір прямокутника навколо точок
     private func getBoundingSize(for points: [CGPoint]) -> CGSize {
         let xs = points.map { $0.x }
         let ys = points.map { $0.y }
@@ -664,7 +694,7 @@ class TextDrawingView: UIView {
         return CGSize(width: maxX - minX, height: maxY - minY)
     }
     
-    // Отримання центру набору точок
+    // Центр полігону
     private func getCenterOfPoints(_ points: [CGPoint]) -> CGPoint {
         let count = CGFloat(points.count)
         let x = points.reduce(0) { $0 + $1.x } / count
