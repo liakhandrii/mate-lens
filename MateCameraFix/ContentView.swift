@@ -1,13 +1,16 @@
 import SwiftUI
 import MLKit
+import Combine
 
 struct ContentView: View {
     @StateObject private var cameraManager = CameraManager()
     @State private var showOverlay = false
     @State private var textData: [WordData] = []
     @State private var isProcessing = false
-    
     @State private var debugEnabled: Bool = false
+    
+    // Підписка на зміни зображення з камери
+    @State private var imageProcessingCancellable: AnyCancellable?
 
     #if DEBUG
     private let drawDebugButton = true
@@ -15,7 +18,7 @@ struct ContentView: View {
     private let drawDebugButton = false
     #endif
         
-    // Розміри та відступи
+    // Константи для UI елементів
     private enum Layout {
         static let captureButtonSize: CGFloat = 70
         static let captureButtonStrokeWidth: CGFloat = 2
@@ -25,14 +28,12 @@ struct ContentView: View {
         static let previewImageSize: CGFloat = 100
         static let previewImageBorderWidth: CGFloat = 2
         static let previewImagePadding: CGFloat = 16
-        
-        static let captureDelay: TimeInterval = 1.5
     }
     
     var body: some View {
         NavigationStack {
             ZStack {
-                // Камера на повний екран
+                // Прев'ю з камери на весь екран
                 CameraView(cameraManager: cameraManager)
                     .ignoresSafeArea()
             
@@ -40,7 +41,7 @@ struct ContentView: View {
                     Spacer()
                         
                     HStack(spacing: 30) {
-                        // DEBUG кнопка (тільки в DEBUG режимі)
+                        // Кнопка для дебагу (показується тільки в DEBUG збірці)
                         if drawDebugButton {
                             Button(action: {
                                 debugEnabled.toggle()
@@ -55,19 +56,8 @@ struct ContentView: View {
                             }
                         }
                         
-                        // Кнопка фото з обробкою
-                        Button(action: {
-                            isProcessing = true
-                            cameraManager.capturePhoto()
-                            
-                            // Затримка для обробки фото
-                            DispatchQueue.main.asyncAfter(deadline: .now() + Layout.captureDelay) {
-                                if let image = cameraManager.capturedImage {
-                                    recognizeText(in: image)
-                                }
-                                isProcessing = false
-                            }
-                        }) {
+                        // Основна кнопка захоплення фото
+                        Button(action: capturePhotoAction) {
                             Circle()
                                 .fill(Color.white)
                                 .frame(width: Layout.captureButtonSize, height: Layout.captureButtonSize)
@@ -76,17 +66,18 @@ struct ContentView: View {
                                         .stroke(Color.black.opacity(Layout.captureButtonStrokeOpacity), lineWidth: Layout.captureButtonStrokeWidth)
                                 )
                         }
+                        .disabled(isProcessing) // Блокуємо під час обробки
                         
-                        // Spacer для симетрії, якщо DEBUG кнопка не показується
+                        // Spacer для балансу UI коли DEBUG кнопка прихована
                         if !drawDebugButton {
                             Spacer()
-                                .frame(width: 60) // Приблизна ширина DEBUG кнопки
+                                .frame(width: 60) // Ширина відповідає DEBUG кнопці
                         }
                     }
                     .padding(.bottom, Layout.captureButtonBottomPadding)
                 }
             
-                // Маленьке фото в кутку
+                // Мініатюра останнього знімка в правому верхньому куті
                 if let capturedImage = cameraManager.capturedImage {
                     VStack {
                         HStack {
@@ -102,7 +93,7 @@ struct ContentView: View {
                     }
                 }
             
-                // Індикатор завантаження
+                // Спінер під час обробки
                 if isProcessing {
                     ProgressView()
                         .scaleEffect(2)
@@ -118,13 +109,60 @@ struct ContentView: View {
                     debugEnabled: debugEnabled
                 )
             }
+            .onAppear {
+                setupImageObserver()
+            }
+            .onDisappear {
+                imageProcessingCancellable?.cancel()
+            }
         }
     }
     
-    // MARK: - Функція розпізнавання тексту
+    // MARK: - Налаштування спостереження за зображенням
+    private func setupImageObserver() {
+        // Підписуємось на оновлення capturedImage
+        imageProcessingCancellable = cameraManager.$capturedImage
+            .dropFirst() // Пропускаємо початкове nil значення
+            .compactMap { $0 } // Відфільтровуємо nil
+            .receive(on: DispatchQueue.main)
+            .sink { image in
+                guard self.isProcessing else { return }
+                
+                print("Image captured, starting text recognition...")
+                self.recognizeText(in: image)
+            }
+    }
+    
+    // MARK: - Обробка натискання кнопки захоплення
+    private func capturePhotoAction() {
+        print("Capture button pressed")
+        isProcessing = true
+        
+        // Викликаємо захоплення з колбеком
+        cameraManager.capturePhoto { success, error in
+            if let error = error {
+                print("Capture error: \(error)")
+                DispatchQueue.main.async {
+                    self.isProcessing = false
+                }
+                return
+            }
+            
+            if !success {
+                print("Capture failed without error")
+                DispatchQueue.main.async {
+                    self.isProcessing = false
+                }
+            }
+            // При успіху обробка продовжиться через observer
+        }
+    }
+    
+    // MARK: - Розпізнавання тексту на зображенні
     func recognizeText(in image: UIImage) {
         guard let normalizedImage = Utilities.normalize(image: image) else {
             print("Failed to normalize image")
+            isProcessing = false
             return
         }
         
@@ -135,12 +173,18 @@ struct ContentView: View {
 
         textRecognizer.process(visionImage) { result, error in
             if let error = error {
-                print("Error: \(error)")
+                print("Text recognition error: \(error)")
+                DispatchQueue.main.async {
+                    self.isProcessing = false
+                }
                 return
             }
 
             guard let result = result else {
-                print("Text not found")
+                print("No text found in image")
+                DispatchQueue.main.async {
+                    self.isProcessing = false
+                }
                 return
             }
 
@@ -148,13 +192,24 @@ struct ContentView: View {
             for block in result.blocks {
                 for line in block.lines {
                     let optimizedText = Utilities.optimizeText(line.text)
+                    
+                    // Отримуємо кутові точки тексту
+                    let corners = line.cornerPoints.map { $0.cgPointValue }
+                    
+                    // Перевіряємо валідність кутових точок
+                    if corners.isEmpty || corners.count != 4 {
+                        print("Warning: Line '\(optimizedText)' has invalid corner points (count: \(corners.count))")
+                    }
+                    
                     let lineItem = WordData(
                         text: optimizedText,
                         frame: line.frame,
-                        cornerPoints: line.cornerPoints.map { $0.cgPointValue }
+                        cornerPoints: corners.isEmpty ? nil : corners  // Якщо немає точок - передаємо nil
                     )
                     lineItems.append(lineItem)
-                    print("Found line: \(optimizedText) at position: (\(line.frame.midX), \(line.frame.midY))")
+                    print("Found line: '\(optimizedText)'")
+                    print("  Frame: \(line.frame)")
+                    print("  Corners: \(corners.isEmpty ? "empty" : corners.description)")
                 }
             }
             
@@ -162,14 +217,14 @@ struct ContentView: View {
 
             DispatchQueue.main.async {
                 self.textData = lineItems
+                self.isProcessing = false
                 self.showOverlay = true
             }
         }
     }
 }
 
-
-// MARK: - Представлення накладання тексту
+// MARK: - View для відображення тексту поверх зображення
 struct PositionedTextOverlayView: View {
     let image: UIImage?
     let textData: [WordData]
@@ -183,6 +238,7 @@ struct PositionedTextOverlayView: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: geometry.size.width, height: geometry.size.height)
+                        .position(x: geometry.size.width/2, y: geometry.size.height/2)
             
                     PerspectiveTextView(
                         textItems: textData,
@@ -190,6 +246,21 @@ struct PositionedTextOverlayView: View {
                         screenSize: geometry.size,
                         debugEnabled: debugEnabled
                     )
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .position(x: geometry.size.width/2, y: geometry.size.height/2)
+                    
+                    // Лічильник знайдених текстів для дебагу
+                    if debugEnabled {
+                        VStack {
+                            Text("Texts found: \(textData.count)")
+                                .foregroundColor(.red)
+                                .padding()
+                                .background(Color.white.opacity(0.8))
+                                .cornerRadius(8)
+                            Spacer()
+                        }
+                        .padding()
+                    }
                 } else {
                     Text("Photo not made")
                 }
@@ -201,7 +272,7 @@ struct PositionedTextOverlayView: View {
     }
 }
 
-// MARK: - PerspectiveTextView для відображення тексту з перспективою
+// MARK: - UIViewRepresentable для малювання тексту з урахуванням перспективи
 struct PerspectiveTextView: UIViewRepresentable {
     let textItems: [WordData]
     let imageSize: CGSize
@@ -209,21 +280,60 @@ struct PerspectiveTextView: UIViewRepresentable {
     let debugEnabled: Bool
     
     func makeUIView(context: Context) -> TextDrawingView {
-        let view = TextDrawingView()
+        let view = TextDrawingView(frame: CGRect(origin: .zero, size: screenSize))
+        view.backgroundColor = .clear
+        view.isOpaque = false
         view.textItems = transformTextItems(textItems, imageSize: imageSize, screenSize: screenSize)
         view.debugEnabled = debugEnabled
         return view
     }
     
     func updateUIView(_ uiView: TextDrawingView, context: Context) {
+        uiView.frame = CGRect(origin: .zero, size: screenSize)
         uiView.textItems = transformTextItems(textItems, imageSize: imageSize, screenSize: screenSize)
         uiView.debugEnabled = debugEnabled
         uiView.setNeedsDisplay()
     }
     
-    // Конвертуємо координати тексту для екрану
+    // Трансформація координат з простору зображення в простір екрану
     private func transformTextItems(_ items: [WordData], imageSize: CGSize, screenSize: CGSize) -> [TransformedTextItem] {
+        print("Transforming \(items.count) text items")
+        print("Image size: \(imageSize), Screen size: \(screenSize)")
+        
         return items.compactMap { item in
+            // Фолбек на frame якщо немає кутових точок
+            if item.cornerPoints == nil || item.cornerPoints?.count != 4 {
+                print("Using frame fallback for: \(item.text)")
+                let (scale, offsetX, offsetY) = calculateScaleAndOffsets(imageSize: imageSize, screenSize: screenSize)
+                
+                // Генеруємо кутові точки з frame
+                let transformedFrame = CGRect(
+                    x: item.frame.origin.x * scale + offsetX,
+                    y: item.frame.origin.y * scale + offsetY,
+                    width: item.frame.width * scale,
+                    height: item.frame.height * scale
+                )
+                
+                let corners = [
+                    CGPoint(x: transformedFrame.minX, y: transformedFrame.minY),
+                    CGPoint(x: transformedFrame.maxX, y: transformedFrame.minY),
+                    CGPoint(x: transformedFrame.maxX, y: transformedFrame.maxY),
+                    CGPoint(x: transformedFrame.minX, y: transformedFrame.maxY)
+                ]
+                
+                let fontSize = transformedFrame.height * 0.7
+                let contentType = Utilities.detectContentType(for: item.text)
+                
+                return TransformedTextItem(
+                    text: item.text,
+                    cornerPoints: corners,
+                    fontSize: fontSize,
+                    contentType: contentType,
+                    debug: nil
+                )
+            }
+            
+            // Стандартна обробка з кутовими точками
             let fontSize = calculateAdaptiveFontSize(for: item, imageSize: imageSize, screenSize: screenSize)
             let contentType = Utilities.detectContentType(for: item.text)
             
@@ -231,38 +341,36 @@ struct PerspectiveTextView: UIViewRepresentable {
             
             let transformedPoints = item.cornerPoints!.map { transform($0, imageSize: imageSize, screenSize: screenSize) }
             
-            if let cornerPoints = item.cornerPoints, cornerPoints.count == 4 {
-                let padding: CGFloat = 4  // Збільшено для більшого простору
-                let expandedPoints = expandPolygon(transformedPoints, by: padding)
-                
-                debugInfo.originalCornerPoints = transformedPoints
-                
-                let (scale, offsetX, offsetY) = calculateScaleAndOffsets(imageSize: imageSize, screenSize: screenSize)
-                let transformedFrame = CGRect(
-                    x: item.frame.origin.x * scale + offsetX,
-                    y: item.frame.origin.y * scale + offsetY,
-                    width: item.frame.width * scale,
-                    height: item.frame.height * scale
-                )
-                debugInfo.calculatedTextFrame = transformedFrame
-                
-                debugInfo.transformedCornerPoints = expandedPoints
-                debugInfo.calculatedFontSize = fontSize
-                
-                return TransformedTextItem(
-                    text: item.text,
-                    cornerPoints: expandedPoints,
-                    fontSize: fontSize,
-                    contentType: contentType,
-                    debug: debugInfo
-                )
-            } else {
-                return nil
-            }
+            let padding: CGFloat = 4
+            let expandedPoints = expandPolygon(transformedPoints, by: padding)
+            
+            debugInfo.originalCornerPoints = transformedPoints
+            
+            let (scale, offsetX, offsetY) = calculateScaleAndOffsets(imageSize: imageSize, screenSize: screenSize)
+            let transformedFrame = CGRect(
+                x: item.frame.origin.x * scale + offsetX,
+                y: item.frame.origin.y * scale + offsetY,
+                width: item.frame.width * scale,
+                height: item.frame.height * scale
+            )
+            debugInfo.calculatedTextFrame = transformedFrame
+            
+            debugInfo.transformedCornerPoints = expandedPoints
+            debugInfo.calculatedFontSize = fontSize
+            
+            print("Transformed: \(item.text) -> corners: \(expandedPoints[0])")
+            
+            return TransformedTextItem(
+                text: item.text,
+                cornerPoints: expandedPoints,
+                fontSize: fontSize,
+                contentType: contentType,
+                debug: debugEnabled ? debugInfo : nil
+            )
         }
     }
     
-    // Підбираємо розмір шрифту під блок
+    // Адаптивний розрахунок розміру шрифту
     private func calculateAdaptiveFontSize(for item: WordData, imageSize: CGSize, screenSize: CGSize) -> CGFloat {
         let (scale, _, _) = calculateScaleAndOffsets(imageSize: imageSize, screenSize: screenSize)
         
@@ -272,12 +380,12 @@ struct PerspectiveTextView: UIViewRepresentable {
         
         let transformedPoints = cornerPoints.map { transform($0, imageSize: imageSize, screenSize: screenSize) }
         
-        // Висота по лівій і правій стороні
+        // Розраховуємо середню висоту блоку
         let leftHeight = distance(from: transformedPoints[0], to: transformedPoints[3])
         let rightHeight = distance(from: transformedPoints[1], to: transformedPoints[2])
         let avgHeight = (leftHeight + rightHeight) / 2.0
         
-        // Ширина зверху і знизу
+        // Розраховуємо середню ширину блоку
         let topWidth = distance(from: transformedPoints[0], to: transformedPoints[1])
         let bottomWidth = distance(from: transformedPoints[3], to: transformedPoints[2])
         let avgWidth = (topWidth + bottomWidth) / 2.0
@@ -285,10 +393,10 @@ struct PerspectiveTextView: UIViewRepresentable {
         let textLength = item.text.count
         let widthHeightRatio = avgWidth / avgHeight
         
-        // Базовий коефіцієнт - зменшено для кращого відображення
+        // Базовий масштаб для шрифту
         var scaleFactor: CGFloat = 0.7
         
-        // Довгі тексти потребують меншого шрифту
+        // Корегуємо для довгих текстів
         if textLength > 20 {
             scaleFactor = 0.5
         } else if textLength > 12 {
@@ -303,7 +411,7 @@ struct PerspectiveTextView: UIViewRepresentable {
             scaleFactor = 0.75
         }
         
-        // Короткі тексти можуть бути більшими
+        // Збільшуємо для коротких текстів
         if textLength <= 3 {
             scaleFactor *= 1.1
         } else if textLength <= 5 {
@@ -314,14 +422,14 @@ struct PerspectiveTextView: UIViewRepresentable {
         return max(fontSize, 8.0)
     }
     
-    // Відстань між точками
+    // Обчислення відстані між двома точками
     private func distance(from point1: CGPoint, to point2: CGPoint) -> CGFloat {
         let dx = point2.x - point1.x
         let dy = point2.y - point1.y
         return sqrt(dx * dx + dy * dy)
     }
     
-    // Збільшуємо полігон щоб покрив весь текст
+    // Розширення полігону для кращого покриття тексту
     private func expandPolygon(_ points: [CGPoint], by padding: CGFloat) -> [CGPoint] {
         guard points.count >= 3 else { return points }
         
@@ -334,7 +442,7 @@ struct PerspectiveTextView: UIViewRepresentable {
             
             if distance < 0.0001 { return point }
             
-            // Адаптивне розширення залежно від розміру
+            // Масштабуємо від центру назовні
             let adaptivePadding = padding * 1.5
             let scale = (distance + adaptivePadding) / distance
             return CGPoint(
@@ -344,7 +452,7 @@ struct PerspectiveTextView: UIViewRepresentable {
         }
     }
     
-    // Знаходимо центр полігону (працює краще для неправильних форм)
+    // Пошук центру полігону з урахуванням його форми
     private func improvedCenterOf(_ points: [CGPoint]) -> CGPoint {
         guard points.count >= 3 else {
             let xs = points.map { $0.x }
@@ -353,7 +461,7 @@ struct PerspectiveTextView: UIViewRepresentable {
         }
         
         if points.count == 4 {
-            // Для чотирикутників - перетин діагоналей
+            // Для чотирикутника знаходимо перетин діагоналей
             let p1 = points[0]
             let p2 = points[2]
             let p3 = points[1]
@@ -362,7 +470,7 @@ struct PerspectiveTextView: UIViewRepresentable {
             let d = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x)
             
             if abs(d) < 0.000001 {
-                // Якщо діагоналі паралельні
+                // Діагоналі паралельні - беремо середнє арифметичне
                 return CGPoint(
                     x: (p1.x + p2.x + p3.x + p4.x) / 4.0,
                     y: (p1.y + p2.y + p3.y + p4.y) / 4.0
@@ -377,29 +485,29 @@ struct PerspectiveTextView: UIViewRepresentable {
             )
         }
         
-        // Інакше просто середнє
+        // Для інших випадків - середнє арифметичне
         let xs = points.map { $0.x }
         let ys = points.map { $0.y }
         return CGPoint(x: xs.reduce(0, +) / CGFloat(xs.count), y: ys.reduce(0, +) / CGFloat(ys.count))
     }
     
-    // Масштаб і зміщення для fit на екрані
+    // Розрахунок масштабу та відступів для aspect fit
     private func calculateScaleAndOffsets(imageSize: CGSize, screenSize: CGSize) -> (scale: CGFloat, offsetX: CGFloat, offsetY: CGFloat) {
         let imageAspectRatio = imageSize.width / imageSize.height
         let screenAspectRatio = screenSize.width / screenSize.height
         
         if imageAspectRatio > screenAspectRatio {
-            // Картинка ширша
+            // Зображення ширше за екран
             let scale = screenSize.width / imageSize.width
             return (scale, 0, (screenSize.height - imageSize.height * scale) / 2)
         } else {
-            // Картинка вища
+            // Зображення вище за екран
             let scale = screenSize.height / imageSize.height
             return (scale, (screenSize.width - imageSize.width * scale) / 2, 0)
         }
     }
     
-    // Конвертуємо точку з координат картинки в координати екрану
+    // Трансформація точки з координат зображення в координати екрану
     private func transform(_ point: CGPoint, imageSize: CGSize, screenSize: CGSize) -> CGPoint {
         let (scale, offsetX, offsetY) = calculateScaleAndOffsets(imageSize: imageSize, screenSize: screenSize)
         return CGPoint(
@@ -409,7 +517,7 @@ struct PerspectiveTextView: UIViewRepresentable {
     }
 }
 
-// MARK: - TextDrawingView для малювання тексту з перспективою
+// MARK: - UIView для кастомного малювання тексту
 class TextDrawingView: UIView {
     var textItems: [TransformedTextItem] = [] {
         didSet {
@@ -438,7 +546,7 @@ class TextDrawingView: UIView {
             context.setStrokeColor(UIColor.gray.withAlphaComponent(0.3).cgColor)
             context.setLineWidth(0.5)
             
-            // Малюємо фон
+            // Малюємо білий фон під текстом
             context.beginPath()
             if item.cornerPoints.count >= 4 {
                 context.move(to: item.cornerPoints[0])
@@ -449,10 +557,10 @@ class TextDrawingView: UIView {
                 context.drawPath(using: .fillStroke)
             }
             
-            // Текст з поворотом
+            // Малюємо сам текст з урахуванням перспективи
             drawTextWithPerspective(context: context, item: item)
             
-            // Debug режим
+            // Відображаємо дебаг інформацію якщо потрібно
             if debugEnabled, let debug = item.debug {
                 drawDebugInfo(context: context, debug: debug)
             }
@@ -461,12 +569,12 @@ class TextDrawingView: UIView {
         }
     }
     
-    // Debug малювання
+    // Малювання дебаг інформації
     private func drawDebugInfo(context: CGContext, debug: TextTransformDebug) {
         context.saveGState()
         context.setLineWidth(1.0)
         
-        // Оригінальні точки - червоні
+        // Червоні лінії - оригінальні кутові точки
         if let originalPoints = debug.originalCornerPoints, originalPoints.count >= 4 {
             context.setStrokeColor(UIColor.red.cgColor)
             context.beginPath()
@@ -478,7 +586,7 @@ class TextDrawingView: UIView {
             context.strokePath()
         }
         
-        // Розширені точки - жовті
+        // Жовті лінії - розширені кутові точки
         if let transformedPoints = debug.transformedCornerPoints, transformedPoints.count >= 4 {
             context.setStrokeColor(UIColor.yellow.cgColor)
             context.beginPath()
@@ -490,12 +598,12 @@ class TextDrawingView: UIView {
             context.strokePath()
         }
         
-        // Рамка тексту - синя
+        // Синя рамка - область малювання тексту
         if let textRect = debug.calculatedTextRect,
             let transformedPoints = debug.transformedCornerPoints, transformedPoints.count >= 4 {
             let center = getCenterOfPoints(transformedPoints)
             
-            // Позиція рамки на екрані
+            // Розраховуємо позицію рамки на екрані
             let actualTextRect = CGRect(
                 x: center.x + textRect.origin.x,
                 y: center.y + textRect.origin.y,
@@ -507,13 +615,13 @@ class TextDrawingView: UIView {
             context.stroke(actualTextRect)
         }
         
-        // Frame з MLKit - зелений
+        // Зелена рамка - frame від MLKit
         if let textFrame = debug.calculatedTextFrame {
             context.setStrokeColor(UIColor.green.cgColor)
             context.stroke(textFrame)
         }
         
-        // Debug інфа: кут і розмір шрифту
+        // Виводимо числові значення дебагу
         if let transformedPoints = debug.transformedCornerPoints, transformedPoints.count >= 4 {
             let center = getCenterOfPoints(transformedPoints)
             var debugTexts: [String] = []
@@ -539,7 +647,7 @@ class TextDrawingView: UIView {
                 
                 let textRect = CGRect(
                     x: center.x - textSize.width / 2,
-                    y: center.y + 10, // Під текстом
+                    y: center.y + 10, // Розміщуємо під основним текстом
                     width: textSize.width,
                     height: textSize.height
                 )
@@ -557,30 +665,30 @@ class TextDrawingView: UIView {
         let areaWidth = areaSize.width
         let areaHeight = areaSize.height
         
-        // Тип контенту
+        // Визначаємо тип контенту для стилізації
         let contentType = Utilities.detectContentType(for: item.text)
         
-        // Підбір шрифту
+        // Вибираємо відповідний шрифт
         let font = Utilities.selectAdaptiveFont(for: item.text, baseSize: item.fontSize, contentType: contentType)
         
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = .center
-        paragraphStyle.lineBreakMode = .byTruncatingTail  // Змінено назад для коротких текстів
-        paragraphStyle.lineHeightMultiple = 0.85  // Трохи збільшено
+        paragraphStyle.lineBreakMode = .byTruncatingTail  // Обрізаємо довгий текст
+        paragraphStyle.lineHeightMultiple = 0.85  // Зменшуємо міжрядковий інтервал
         
-        // Довгі тексти - з переносами
+        // Для довгих текстів дозволяємо перенос по словах
         if item.text.count > 15 {
             paragraphStyle.lineBreakMode = .byWordWrapping
         }
         
-        // Атрибути тексту
+        // Базові атрибути тексту
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: contentType.color,
             .paragraphStyle: paragraphStyle
         ]
         
-        // Для важливої інфо додаємо тінь
+        // Додаємо ефекти для важливих типів контенту
         var enhancedAttributes = attributes
         if contentType == .price || contentType == .date || contentType == .number {
             let shadow = NSShadow()
@@ -592,11 +700,11 @@ class TextDrawingView: UIView {
         
         let attributedString = NSAttributedString(string: item.text, attributes: enhancedAttributes)
         
-        // Максимальна ширина залежить від форми області
+        // Адаптуємо ширину тексту до форми області
         let heightToWidthRatio = areaHeight / areaWidth
-        var widthMultiplier: CGFloat = 0.9  // Збільшено базовий множник
+        var widthMultiplier: CGFloat = 0.9  // Базове заповнення області
         
-        if heightToWidthRatio < 0.2 { // Вузька смужка
+        if heightToWidthRatio < 0.2 { // Дуже вузька смужка
             widthMultiplier = 0.75
         } else if heightToWidthRatio < 0.3 {
             widthMultiplier = 0.8
@@ -604,7 +712,7 @@ class TextDrawingView: UIView {
             widthMultiplier = 0.85
         }
         
-        // Короткі тексти можуть займати більше місця
+        // Короткі тексти можуть використовувати більше простору
         if item.text.count <= 10 {
             widthMultiplier = min(widthMultiplier * 1.1, 0.95)
         }
@@ -627,7 +735,7 @@ class TextDrawingView: UIView {
             item.debug?.calculatedRotationAngle = angle
             context.rotate(by: angle)
             
-            // Позиція тексту
+            // Центруємо текст відносно повернутої системи координат
             let textRect = CGRect(
                 x: -textSize.width / 2,
                 y: -textSize.height / 2,
@@ -653,24 +761,24 @@ class TextDrawingView: UIView {
         }
     }
     
-    // Кут нахилу тексту
+    // Розрахунок кута повороту тексту на основі кутових точок
     private func calculateRotationAngle(_ points: [CGPoint]) -> CGFloat {
         guard points.count >= 4 else { return 0 }
         
-        // Кут верхньої лінії
+        // Обчислюємо кут верхньої грані
         let topDx = points[1].x - points[0].x
         let topDy = points[1].y - points[0].y
         let topAngle = atan2(topDy, topDx)
         
-        // Кут нижньої лінії
+        // Обчислюємо кут нижньої грані
         let bottomDx = points[2].x - points[3].x
         let bottomDy = points[2].y - points[3].y
         let bottomAngle = atan2(bottomDy, bottomDx)
         
-        // Середній кут
+        // Усереднюємо кути для компенсації перспективи
         var angle = (topAngle + bottomAngle) / 2.0
         
-        // Нормалізація (щоб текст не був догори ногами)
+        // Коригуємо кут щоб текст не був перевернутий
         while angle > .pi / 4 {
             angle -= .pi
         }
@@ -681,7 +789,7 @@ class TextDrawingView: UIView {
         return angle
     }
     
-    // Розмір прямокутника навколо точок
+    // Обчислення габаритного прямокутника для набору точок
     private func getBoundingSize(for points: [CGPoint]) -> CGSize {
         let xs = points.map { $0.x }
         let ys = points.map { $0.y }
@@ -694,7 +802,7 @@ class TextDrawingView: UIView {
         return CGSize(width: maxX - minX, height: maxY - minY)
     }
     
-    // Центр полігону
+    // Знаходження геометричного центру набору точок
     private func getCenterOfPoints(_ points: [CGPoint]) -> CGPoint {
         let count = CGFloat(points.count)
         let x = points.reduce(0) { $0 + $1.x } / count

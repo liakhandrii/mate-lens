@@ -27,6 +27,9 @@ class CameraManager: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
     private var captureSession: AVCaptureSession?  // Сесія камери
     private var photoOutput = AVCapturePhotoOutput() // Вихід для фото
     
+    // Completion handler для захоплення фото
+    private var photoCaptureCompletion: ((Bool, CameraError?) -> Void)?
+    
     func setupCamera() -> UIView {
         stopSession()
         
@@ -70,7 +73,7 @@ class CameraManager: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
         return view
     }
     
-    /// Зупиняє сесію камери та очищує її
+    /// Зупиняє сесію камери та очищає її
     func stopSession() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.captureSession?.stopRunning()
@@ -84,32 +87,75 @@ class CameraManager: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
         print("CameraManager deinitialized, session stopped")
     }
     
-    /// Захоплення фото з камери
-    func capturePhoto() {
+    /// Захоплення фото з камери з completion handler
+    func capturePhoto(completion: @escaping (Bool, CameraError?) -> Void) {
+        // Зберігаємо completion handler
+        self.photoCaptureCompletion = completion
+        
+        // Налаштування для захоплення
         let settings = AVCapturePhotoSettings()
+        
+        // Перевіряємо, чи можемо захопити фото
+        guard captureSession?.isRunning == true else {
+            completion(false, .noCameraDevice)
+            return
+        }
+        
+        // Захоплюємо фото
         photoOutput.capturePhoto(with: settings, delegate: self)
     }
     
-    // Делегат AVCapturePhotoCaptureDelegate — викликається після обробки фото
+    /// Стара версія без completion (для зворотної сумісності)
+    func capturePhoto() {
+        capturePhoto { _, _ in }
+    }
+    
+    // MARK: - AVCapturePhotoCaptureDelegate
+    
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
         if let error = error {
             // Якщо сталася помилка — передаємо її у властивість error для UI
-            DispatchQueue.main.async { [weak self] in self?.error = .captureError(error) }
+            let cameraError = CameraError.captureError(error)
+            DispatchQueue.main.async { [weak self] in
+                self?.error = cameraError
+                self?.photoCaptureCompletion?(false, cameraError)
+                self?.photoCaptureCompletion = nil
+            }
             return
         }
         
         guard let imageData = photo.fileDataRepresentation() else {
-            DispatchQueue.main.async { [weak self] in self?.error = .noImageData }
+            let cameraError = CameraError.noImageData
+            DispatchQueue.main.async { [weak self] in
+                self?.error = cameraError
+                self?.photoCaptureCompletion?(false, cameraError)
+                self?.photoCaptureCompletion = nil
+            }
             return
         }
         
         guard let image = UIImage(data: imageData) else {
-            DispatchQueue.main.async { [weak self] in self?.error = .invalidImageData }
+            let cameraError = CameraError.invalidImageData
+            DispatchQueue.main.async { [weak self] in
+                self?.error = cameraError
+                self?.photoCaptureCompletion?(false, cameraError)
+                self?.photoCaptureCompletion = nil
+            }
             return
         }
         
         DispatchQueue.main.async { [weak self] in
             self?.capturedImage = image
+            self?.photoCaptureCompletion?(true, nil)
+            self?.photoCaptureCompletion = nil
+            print("Photo captured successfully")
+        }
+    }
+    
+    // Додатковий метод для очищення зображення
+    func clearCapturedImage() {
+        DispatchQueue.main.async { [weak self] in
+            self?.capturedImage = nil
         }
     }
 }
