@@ -4,6 +4,7 @@ import CoreGraphics // Для CGRect та CGPoint
 // MARK: - Модель даних для розпізнаного тексту
 struct WordData {
     let text: String
+    let translatedText: String?  // Новий: перекладений текст
     let frame: CGRect
     let cornerPoints: [CGPoint]?
 }
@@ -37,6 +38,7 @@ enum ContentType {
 // MARK: - Структура для передачі даних у TextDrawingView
 struct TransformedTextItem {
     let text: String
+    let translatedText: String  // Новий: перекладений текст
     let cornerPoints: [CGPoint]
     let fontSize: CGFloat
     let contentType: ContentType
@@ -58,3 +60,4 @@ class TextTransformDebug {
     /// Text frame from drawTextWithPerspective. Draws blue
     var calculatedTextRect: CGRect?
 }
+
