@@ -1,4 +1,4 @@
-${PODS_ROOT}/Target Support Files/Pods-MateCameraFix/Pods-MateCameraFix-frameworks.sh
+${PODS_ROOT}/Target Support Files/Pods-MateCameraFixTests/Pods-MateCameraFixTests-frameworks.sh
 ${BUILT_PRODUCTS_DIR}/GTMSessionFetcher/GTMSessionFetcher.framework
 ${BUILT_PRODUCTS_DIR}/GoogleDataTransport/GoogleDataTransport.framework
 ${BUILT_PRODUCTS_DIR}/GoogleToolboxForMac/GoogleToolboxForMac.framework
