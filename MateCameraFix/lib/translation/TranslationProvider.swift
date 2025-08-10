@@ -10,4 +10,11 @@ import SwiftyJSON
 
 protocol TranslationProvider {
     func getNativeJson(_ from: String, to: String, text: String, autocorrected: String?) -> JSON?
+    func getNativeJsonBatch(_ from: String, to: String, text: [String]) -> [JSON]?
+}
+
+extension TranslationProvider {
+    func getNativeJsonBatch(_ from: String, to: String, text: [String]) -> [JSON]? {
+        return nil
+    }
 }

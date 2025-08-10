@@ -14,7 +14,7 @@ open class GoogleTranslate: TranslationProvider {
     
     let supportedLanguages = ["am", "co", "fy", "gd", "haw", "ku", "ky", "lb", "ps", "sd", "sm", "sn", "xh", "no", "uz", "fa", "mg", "de", "ig", "ko", "lt", "pl", "tl", "ro", "bn", "auto", "be", "zh-CN", "id", "la", "eu", "mn", "st", "sk", "ta", "da", "gu", "lo", "gl", "uk", "el", "ml", "vi", "si", "pt", "mt", "it", "so", "ceb", "hr", "bg", "lv", "tg", "te", "ht", "ha", "pa", "su", "ur", "ca", "cs", "ne", "sr", "sq", "my", "af", "et", "hu", "cy", "ms", "ru", "mr", "ga", "bs", "hmn", "hy", "sw", "is", "sv", "fi", "eo", "ka", "jw", "mk", "zh-TW", "mi", "sl", "ny", "es", "th", "km", "yo", "zu", "ja", "tr", "nl", "kn", "yi", "az", "he", "ar", "hi", "kk", "fr", "en", "en-us"]
     
-    let translationUrl = "http://clients5.google.com/translate_a/t"
+    let translationUrl = "https://clients5.google.com/translate_a/t"
     let parametersString = "client=dict-chrome-ex&q={{text}}&sl={{from_lang}}&tl={{to_lang}}&tbb=1&ie=UTF-8&oe=UTF-8&hl=en"
     let oneRequestLimit = 1000
     

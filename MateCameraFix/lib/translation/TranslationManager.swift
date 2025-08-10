@@ -22,8 +22,28 @@ class TranslationManager {
     fileprivate init() {
         providers = [
             GoogleTranslateV2(),
+            DeeplTranslate(),
             GoogleTranslate()
         ]
+    }
+    
+    func translateFromTextBatch(_ from: String, to: String, texts: [String], autocorrect: Bool) -> [TranslatedText?]? {
+        for provider in providers {
+            if let jsonResults = provider.getNativeJsonBatch(from, to: to, text: texts) {
+                let translatedTexts = jsonResults.map { json in
+                    let isEmpty = json[CorrectNativeJsonIndexes.translated].stringValue.isEmpty
+                    return isEmpty ? nil : TranslatedText(json: json)
+                }
+                
+                // If we got some results, return them (even if some are nil)
+                if !translatedTexts.allSatisfy({ $0 == nil }) {
+                    return translatedTexts
+                }
+            }
+        }
+        
+        // No provider supports batch - let TranslationService handle concurrent individual calls
+        return nil
     }
     
     func translateFromText(_ from: String, to: String, text: String, autocorrect: Bool) -> TranslatedText? {
