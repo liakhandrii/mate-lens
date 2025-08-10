@@ -7,10 +7,10 @@ struct Utilities {
     static func detectContentType(for text: String) -> ContentType {
         // Видаляємо пробіли для аналізу
         let trimmedText = text.trimmingCharacters(in: .whitespaces)
+        if trimmedText.isEmpty { return .regular }
         
-        // Перевірка на ціну (містить цифри та символи валюти або слова типу EUR, USD)
-        let pricePattern = #"(?:€|$|£|¥|\b(?:EUR|USD|GBP|UAH)\b|\d+[.,]\d{2})"#
-        if let _ = trimmedText.range(of: pricePattern, options: .regularExpression) {
+        let pricePattern = #"(?:€|\$|£|¥|\b(?:EUR|USD|GBP|UAH)\b|\d+[.,]\d{2})"#
+        if trimmedText.range(of: pricePattern, options: .regularExpression) != nil {
             return .price
         }
         
@@ -21,7 +21,7 @@ struct Utilities {
             #"\d{1,2}\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4}"#
         ]
         for pattern in datePatterns {
-            if let _ = trimmedText.range(of: pattern, options: [.regularExpression, .caseInsensitive]) {
+            if trimmedText.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil {
                 return .date
             }
         }
@@ -32,9 +32,8 @@ struct Utilities {
             return .number
         }
         
-        // Перевірка на назву продукту (довші тексти з великої літери)
-        if trimmedText.count > 5 && trimmedText.first?.isUppercase == true {
-            // Додаткова перевірка на типові слова продуктів
+        // Перевірка на назву продукту (довші тексти з великої літери + ключові слова)
+        if trimmedText.count > 5, trimmedText.first?.isUppercase == true {
             let productKeywords = ["STÄBCHEN", "bevola", "Stück", "Pack", "Box", "Dose"]
             for keyword in productKeywords {
                 if trimmedText.localizedCaseInsensitiveContains(keyword) {
@@ -48,7 +47,6 @@ struct Utilities {
 
     static func optimizeText(_ text: String) -> String {
         var processed = text
-        
         // Заміна типових помилок розпізнавання
         let replacements = [
             "0": "O", "1": "I", "5": "S", "8": "B",
@@ -64,19 +62,11 @@ struct Utilities {
     }
 
     // MARK: - Font Selection
-
     static func selectAdaptiveFont(for text: String, baseSize: CGFloat, contentType: ContentType) -> UIFont {
-        // Базовий шрифт залежно від розміру
         let fontName: String
-        
         if baseSize < 12 {
-            // Для дрібного тексту використовуємо чіткіший шрифт
             fontName = "Helvetica Neue"
-        } else if baseSize < 20 {
-            // Для середнього тексту
-            fontName = "System"
         } else {
-            // Для великого тексту
             fontName = "System"
         }
         
@@ -92,23 +82,17 @@ struct Utilities {
             default:
                 helveticaVariant = "HelveticaNeue"
             }
-            
-            return UIFont(name: helveticaVariant, size: baseSize) ?? UIFont.systemFont(ofSize: baseSize, weight: contentType.fontWeight)
+            return UIFont(name: helveticaVariant, size: baseSize)
+                ?? UIFont.systemFont(ofSize: baseSize, weight: contentType.fontWeight)
         }
     }
     
     // MARK: - Image Processing
-
     static func normalize(image: UIImage) -> UIImage? {
         guard image.imageOrientation != .up else { return image }
-
         UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
         defer { UIGraphicsEndImageContext() }
-        
         image.draw(in: CGRect(origin: .zero, size: image.size))
-        
         return UIGraphicsGetImageFromCurrentImageContext()
     }
 }
-
-

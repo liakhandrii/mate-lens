@@ -7,18 +7,11 @@ class TextRecognitionService: ObservableObject {
     @Published var isProcessing = false
     @Published var error: String?
     
-    // MARK: - Розпізнавання тексту на зображенні
     func recognizeText(in image: UIImage, completion: @escaping (Bool) -> Void) {
-        // Очищаємо тільки помилку, дані вже очищені в capturePhotoAction
         self.error = nil
         
         guard let normalizedImage = Utilities.normalize(image: image) else {
-            print("Failed to normalize image")
-            DispatchQueue.main.async {
-                self.error = "Failed to normalize image"
-                self.isProcessing = false
-                completion(false)
-            }
+            finish(success: false, errorMessage: "Failed to normalize image", completion: completion)
             return
         }
         
@@ -26,95 +19,92 @@ class TextRecognitionService: ObservableObject {
         visionImage.orientation = .up
         
         let textRecognizer = TextRecognizer.textRecognizer(options: TextRecognizerOptions())
-
-        textRecognizer.process(visionImage) { [weak self] result, error in
+        
+        textRecognizer.process(visionImage) { [weak self] result, err in
             guard let self = self else { return }
             
-            if let error = error {
-                print("Text recognition error: \(error)")
-                DispatchQueue.main.async {
-                    self.error = error.localizedDescription
-                    self.isProcessing = false
-                    completion(false)
-                }
+            if let err = err {
+                self.finish(success: false, errorMessage: err.localizedDescription, completion: completion)
                 return
             }
-
+            
             guard let result = result else {
-                print("No text found in image")
-                DispatchQueue.main.async {
-                    self.error = "No text found in image"
-                    self.isProcessing = false
-                    completion(false)
-                }
+                self.finish(success: false, errorMessage: "No text found in image", completion: completion)
                 return
             }
-
-            // Обробляємо результати асинхронно для перекладу
+            
             Task {
-                var lineItems: [WordData] = []
+                var collectedLines: [WordData] = []
                 var textsToTranslate: [String] = []
                 
-                // Спочатку збираємо всі тексти
                 for block in result.blocks {
                     for line in block.lines {
-                        let optimizedText = Utilities.optimizeText(line.text)
-                        textsToTranslate.append(optimizedText)
+                        let optimized = Utilities.optimizeText(line.text)
+                        textsToTranslate.append(optimized)
                     }
                 }
                 
-                // Перекладаємо всі тексти
                 let translations = await TranslationService.shared.translateBatch(
                     texts: textsToTranslate,
                     from: "en",
                     to: "uk"
                 )
                 
-                // Створюємо WordData з перекладами
-                var textIndex = 0
+                var index = 0
                 for block in result.blocks {
                     for line in block.lines {
-                        let optimizedText = Utilities.optimizeText(line.text)
-                        let translatedText = translations[textIndex]
+                        let optimized = Utilities.optimizeText(line.text)
+                        let translated = translations[index]
                         
-                        // Отримуємо кутові точки тексту
                         let corners = line.cornerPoints.map { $0.cgPointValue }
-                        
-                        // Перевіряємо валідність кутових точок
                         if corners.isEmpty || corners.count != 4 {
-                            print("Warning: Line '\(optimizedText)' has invalid corner points (count: \(corners.count))")
+                            print("Warning: Line '\(optimized)' has invalid corner points (count: \(corners.count))")
                         }
                         
-                        let lineItem = WordData(
-                            text: optimizedText,
-                            translatedText: translatedText,
+                        let word = WordData(
+                            text: optimized,
+                            translatedText: translated,
                             frame: line.frame,
-                            cornerPoints: corners.isEmpty ? nil : corners  // Якщо немає точок - передаємо nil
+                            cornerPoints: corners.isEmpty ? nil : corners
                         )
-                        lineItems.append(lineItem)
-                        print("Found line: '\(optimizedText)' -> '\(translatedText ?? "no translation")'")
+                        collectedLines.append(word)
+                        
+                        print("Found line: '\(optimized)' -> '\(translated ?? "no translation")'")
                         print("  Frame: \(line.frame)")
                         print("  Corners: \(corners.isEmpty ? "empty" : corners.description)")
                         
-                        textIndex += 1
+                        index += 1
                     }
                 }
                 
-                print("Total lines found: \(lineItems.count)")
-
-                DispatchQueue.main.async {
-                    self.textData = lineItems
-                    self.isProcessing = false
-                    completion(true)
-                }
+                print("Total lines found: \(collectedLines.count)")
+                
+                self.finish(success: true, lines: collectedLines, completion: completion)
             }
         }
     }
     
-    // Метод для очищення даних
+    // MARK: - Clear
     func clearData() {
         textData = []
         error = nil
         isProcessing = false
+    }
+    
+    // MARK: - Centralized finish helper
+    private func finish(success: Bool,
+                        lines: [WordData]? = nil,
+                        errorMessage: String? = nil,
+                        completion: @escaping (Bool) -> Void) {
+        DispatchQueue.main.async {
+            if let errorMessage = errorMessage {
+                self.error = errorMessage
+            }
+            if let lines = lines, success {
+                self.textData = lines
+            }
+            self.isProcessing = false
+            completion(success)
+        }
     }
 }

@@ -152,7 +152,6 @@ class CameraManager: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
         }
     }
     
-    // Додатковий метод для очищення зображення
     func clearCapturedImage() {
         DispatchQueue.main.async { [weak self] in
             self?.capturedImage = nil

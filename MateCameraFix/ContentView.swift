@@ -8,7 +8,6 @@ struct ContentView: View {
     @State private var showOverlay = false
     @State private var debugEnabled: Bool = false
     
-    // Підписка на зміни зображення з камери
     @State private var imageProcessingCancellable: AnyCancellable?
 
     #if DEBUG
@@ -17,7 +16,6 @@ struct ContentView: View {
     private let drawDebugButton = false
     #endif
         
-    // Константи для UI елементів
     private enum Layout {
         static let captureButtonSize: CGFloat = 70
         static let captureButtonStrokeWidth: CGFloat = 2
@@ -32,7 +30,6 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Прев'ю з камери на весь екран
                 CameraView(cameraManager: cameraManager)
                     .ignoresSafeArea()
             
@@ -41,7 +38,6 @@ struct ContentView: View {
                     
                         
                     HStack(spacing: 30) {
-                        // Кнопка для дебагу (показується тільки в DEBUG збірці)
                         if drawDebugButton {
                             Button(action: {
                                 debugEnabled.toggle()
@@ -56,7 +52,6 @@ struct ContentView: View {
                             }
                         }
                         
-                        // Основна кнопка захоплення фото
                         Button(action: capturePhotoAction) {
                             Circle()
                                 .fill(Color.white)
@@ -66,18 +61,16 @@ struct ContentView: View {
                                         .stroke(Color.black.opacity(Layout.captureButtonStrokeOpacity), lineWidth: Layout.captureButtonStrokeWidth)
                                 )
                         }
-                        .disabled(textRecognitionService.isProcessing) // Блокуємо під час обробки
+                        .disabled(textRecognitionService.isProcessing)
                         
-                        // Spacer для балансу UI коли DEBUG кнопка прихована
                         if !drawDebugButton {
                             Spacer()
-                                .frame(width: 60) // Ширина відповідає DEBUG кнопці
+                                .frame(width: 60)
                         }
                     }
                     .padding(.bottom, Layout.captureButtonBottomPadding)
                 }
             
-                // Мініатюра останнього знімка в правому верхньому куті
                 if let capturedImage = cameraManager.capturedImage {
                     VStack {
                         HStack {
@@ -93,7 +86,6 @@ struct ContentView: View {
                     }
                 }
             
-                // Спінер під час обробки
                 if textRecognitionService.isProcessing {
                     ProgressView()
                         .scaleEffect(2)
@@ -102,7 +94,6 @@ struct ContentView: View {
                         .cornerRadius(10)
                 }
                 
-                // Відображення помилки якщо є
                 if let errorMessage = textRecognitionService.error {
                     VStack {
                         Spacer()
@@ -128,7 +119,6 @@ struct ContentView: View {
             }
             .onDisappear {
                 imageProcessingCancellable?.cancel()
-                // Не очищаємо дані тут - вони потрібні для PositionedTextOverlayView
             }
         }
     }
@@ -137,8 +127,8 @@ struct ContentView: View {
     private func setupImageObserver() {
         // Підписуємось на оновлення capturedImage
         imageProcessingCancellable = cameraManager.$capturedImage
-            .dropFirst() // Пропускаємо початкове nil значення
-            .compactMap { $0 } // Відфільтровуємо nil
+            .dropFirst()
+            .compactMap { $0 }
             .receive(on: DispatchQueue.main)
             .sink { image in
                 guard self.textRecognitionService.isProcessing else { return }
@@ -157,13 +147,10 @@ struct ContentView: View {
     private func capturePhotoAction() {
         print("Capture button pressed")
         
-        // Очищаємо попередні дані перед новим захопленням
         textRecognitionService.clearData()
         
-        // Встановлюємо прапор обробки ПЕРЕД захопленням
         textRecognitionService.isProcessing = true
         
-        // Викликаємо захоплення з колбеком
         cameraManager.capturePhoto { success, error in
             if let error = error {
                 print("Capture error: \(error)")
@@ -179,7 +166,6 @@ struct ContentView: View {
                     self.textRecognitionService.isProcessing = false
                 }
             }
-            // При успіху обробка продовжиться через observer
         }
     }
 }

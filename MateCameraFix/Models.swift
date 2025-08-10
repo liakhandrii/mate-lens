@@ -1,15 +1,15 @@
 import UIKit
-import CoreGraphics // Для CGRect та CGPoint
+import CoreGraphics
 
 // MARK: - Модель даних для розпізнаного тексту
 struct WordData {
     let text: String
-    let translatedText: String?  // Новий: перекладений текст
+    let translatedText: String?
     let frame: CGRect
     let cornerPoints: [CGPoint]?
 }
 
-// MARK: - Enum для типів контенту
+// MARK: - Типи контенту
 enum ContentType {
     case number
     case date
@@ -20,44 +20,42 @@ enum ContentType {
     var color: UIColor {
         switch self {
         case .number, .price:
-            return UIColor.black
+            return .black
         case .date:
-            return UIColor.systemGreen
+            return .systemGreen
         case .productName:
-            return UIColor.label
+            return .black
         case .regular:
-            return UIColor.black
+            return .black
         }
     }
     
     var fontWeight: UIFont.Weight {
-        return .regular  // Однакова вага для всіх типів
+        switch self {
+        case .productName:
+            return .regular
+        default:
+            return .regular
+        }
     }
 }
 
-// MARK: - Структура для передачі даних у TextDrawingView
+// MARK: - Трансформований елемент для малювання
 struct TransformedTextItem {
     let text: String
-    let translatedText: String  // Новий: перекладений текст
+    let translatedText: String
     let cornerPoints: [CGPoint]
     let fontSize: CGFloat
     let contentType: ContentType
     let debug: TextTransformDebug?
 }
 
-// MARK: - Клас для зберігання відлагоджувальної інформації
+// MARK: - Debug інформація
 class TextTransformDebug {
-    /// Original corners as recognized by MLKit. Draws red
     var originalCornerPoints: [CGPoint]?
-    /// Frame as calculated by recognizeText. Draws green
     var calculatedTextFrame: CGRect?
-    /// Corners from the transformTextItems function. Draws yellow
     var transformedCornerPoints: [CGPoint]?
-    /// Font size from calculateAdaptiveFontSize. Draws purple
     var calculatedFontSize: CGFloat?
-    /// Angle from drawTextWithPerspective. Draws purple
     var calculatedRotationAngle: CGFloat?
-    /// Text frame from drawTextWithPerspective. Draws blue
     var calculatedTextRect: CGRect?
 }
-
