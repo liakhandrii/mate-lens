@@ -21,8 +21,8 @@ class TranslationManager {
     
     fileprivate init() {
         providers = [
-            GoogleTranslateV2(),
             DeeplTranslate(),
+            GoogleTranslateV2(),
             GoogleTranslate()
         ]
     }

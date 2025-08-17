@@ -1,11 +1,12 @@
 import UIKit
+import CoreImage
+import CoreImage.CIFilterBuiltins
 
 struct Utilities {
     
     // MARK: - Text Processing
     
     static func detectContentType(for text: String) -> ContentType {
-        // Видаляємо пробіли для аналізу
         let trimmedText = text.trimmingCharacters(in: .whitespaces)
         if trimmedText.isEmpty { return .regular }
         
@@ -45,20 +46,35 @@ struct Utilities {
         return .regular
     }
 
-    static func optimizeText(_ text: String) -> String {
-        var processed = text
-        // Заміна типових помилок розпізнавання
-        let replacements = [
-            "0": "O", "1": "I", "5": "S", "8": "B",
-            "rn": "m", "cl": "d", "vv": "w",
-            "teh": "the", "adn": "and"
-        ]
+    static func optimizeText(_ text: String, contentType: ContentType? = nil) -> String {
+        var processed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        for (error, correction) in replacements {
-            processed = processed.replacingOccurrences(of: error, with: correction)
-        }
+        processed = processed.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
         
         return processed
+    }
+    
+    static func optimizeText(_ text: String) -> String {
+        return optimizeText(text, contentType: nil)
+    }
+    
+    private static func digitRatio(in s: String) -> Double {
+        guard !s.isEmpty else { return 0 }
+        let digits = s.filter { $0.isNumber }.count
+        return Double(digits) / Double(s.count)
+    }
+    
+    private static func replaceRegex(_ pattern: String,
+                                     in text: String,
+                                     with template: String,
+                                     options: NSRegularExpression.Options = []) -> String {
+        do {
+            let regex = try NSRegularExpression(pattern: pattern, options: options)
+            let range = NSRange(text.startIndex..<text.endIndex, in: text)
+            return regex.stringByReplacingMatches(in: text, options: [], range: range, withTemplate: template)
+        } catch {
+            return text
+        }
     }
 
     // MARK: - Font Selection
@@ -88,6 +104,27 @@ struct Utilities {
     }
     
     // MARK: - Image Processing
+    
+    static func preprocessForOCR(image: UIImage) -> UIImage? {
+        guard let ciImage = CIImage(image: image) else { return nil }
+        
+        let filter = ciImage
+            // Підвищити контраст
+            .applyingFilter("CIColorControls", parameters: [
+                "inputContrast": 1.5,
+                "inputBrightness": 0.1
+            ])
+            // Збільшити різкість
+            .applyingFilter("CISharpenLuminance", parameters: [
+                "inputSharpness": 0.8
+            ])
+
+        let context = CIContext()
+        guard let cgImage = context.createCGImage(filter, from: filter.extent) else { return nil }
+        
+        return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
+    }
+    
     static func normalize(image: UIImage) -> UIImage? {
         guard image.imageOrientation != .up else { return image }
         UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
