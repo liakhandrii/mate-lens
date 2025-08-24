@@ -78,7 +78,7 @@ struct Utilities {
     }
 
     // MARK: - Font Selection
-    static func selectAdaptiveFont(for text: String, baseSize: CGFloat, contentType: ContentType) -> UIFont {
+    static func selectAdaptiveFont(for text: String, baseSize: CGFloat, contentType: ContentType, weight: UIFont.Weight) -> UIFont {
         let fontName: String
         if baseSize < 12 {
             fontName = "Helvetica Neue"
@@ -86,11 +86,13 @@ struct Utilities {
             fontName = "System"
         }
         
+        let finalWeight = weight == .regular ? contentType.fontWeight : weight
+        
         if fontName == "System" {
-            return UIFont.systemFont(ofSize: baseSize, weight: contentType.fontWeight)
+            return UIFont.systemFont(ofSize: baseSize, weight: finalWeight)
         } else {
             let helveticaVariant: String
-            switch contentType.fontWeight {
+            switch finalWeight {
             case .bold, .semibold:
                 helveticaVariant = "HelveticaNeue-Bold"
             case .medium:
@@ -99,7 +101,7 @@ struct Utilities {
                 helveticaVariant = "HelveticaNeue"
             }
             return UIFont(name: helveticaVariant, size: baseSize)
-                ?? UIFont.systemFont(ofSize: baseSize, weight: contentType.fontWeight)
+                ?? UIFont.systemFont(ofSize: baseSize, weight: finalWeight)
         }
     }
     
@@ -131,5 +133,116 @@ struct Utilities {
         defer { UIGraphicsEndImageContext() }
         image.draw(in: CGRect(origin: .zero, size: image.size))
         return UIGraphicsGetImageFromCurrentImageContext()
+    }
+    
+    // MARK: - Coordinate Transformation
+    
+    // Розрахунок масштабу та відступів для aspect fit
+    static func calculateScaleAndOffsets(imageSize: CGSize, screenSize: CGSize) -> (scale: CGFloat, offsetX: CGFloat, offsetY: CGFloat) {
+        let imageAspectRatio = imageSize.width / imageSize.height
+        let screenAspectRatio = screenSize.width / screenSize.height
+        
+        if imageAspectRatio > screenAspectRatio {
+            // Зображення ширше за екран
+            let scale = screenSize.width / imageSize.width
+            return (scale, 0, (screenSize.height - imageSize.height * scale) / 2)
+        } else {
+            // Зображення вище за екран
+            let scale = screenSize.height / imageSize.height
+            return (scale, (screenSize.width - imageSize.width * scale) / 2, 0)
+        }
+    }
+    
+    // Трансформація точки з координат зображення в координати екрану
+    static func transform(_ point: CGPoint, imageSize: CGSize, screenSize: CGSize) -> CGPoint {
+        let (scale, offsetX, offsetY) = calculateScaleAndOffsets(imageSize: imageSize, screenSize: screenSize)
+        return CGPoint(
+            x: point.x * scale + offsetX,
+            y: point.y * scale + offsetY
+        )
+    }
+    
+    // MARK: - Geometry Utils
+    
+    static func distance(from point1: CGPoint, to point2: CGPoint) -> CGFloat {
+        let dx = point2.x - point1.x
+        let dy = point2.y - point1.y
+        return sqrt(dx * dx + dy * dy)
+    }
+    
+    static func expandPolygon(_ points: [CGPoint], by padding: CGFloat) -> [CGPoint] {
+        guard points.count >= 3 else { return points }
+        
+        let center = Utilities.improvedCenterOf(points)
+        
+        return points.map { point in
+            let dx = point.x - center.x
+            let dy = point.y - center.y
+            let distance = sqrt(dx*dx + dy*dy)
+            
+            if distance < 0.0001 { return point }
+            
+            let adaptivePadding = padding * 1.5
+            let scale = (distance + adaptivePadding) / distance
+            return CGPoint(
+                x: center.x + dx * scale,
+                y: center.y + dy * scale
+            )
+        }
+    }
+    
+    static func shrinkPolygon(_ points: [CGPoint], by padding: CGFloat) -> [CGPoint] {
+        guard points.count >= 3 else { return points }
+        
+        let center = Utilities.improvedCenterOf(points)
+        
+        return points.map { point in
+            let dx = point.x - center.x
+            let dy = point.y - center.y
+            let distance = sqrt(dx*dx + dy*dy)
+            
+            if distance < 0.0001 { return point }
+            
+            let scale = max(0.0, (distance - padding) / distance)
+            return CGPoint(
+                x: center.x + dx * scale,
+                y: center.y + dy * scale
+            )
+        }
+    }
+    
+    static func improvedCenterOf(_ points: [CGPoint]) -> CGPoint {
+        guard points.count >= 3 else {
+            let xs = points.map { $0.x }
+            let ys = points.map { $0.y }
+            return CGPoint(x: xs.reduce(0, +) / CGFloat(xs.count), y: ys.reduce(0, +) / CGFloat(ys.count))
+        }
+        
+        if points.count == 4 {
+            let p1 = points[0]
+            let p2 = points[2]
+            let p3 = points[1]
+            let p4 = points[3]
+            
+            let d = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x)
+            
+            if abs(d) < 0.000001 {
+                return CGPoint(
+                    x: (p1.x + p2.x + p3.x + p4.x) / 4.0,
+                    y: (p1.y + p2.y + p3.y + p4.y) / 4.0
+                )
+            }
+            
+            let t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / d
+            
+            return CGPoint(
+                x: p1.x + t * (p2.x - p1.x),
+                y: p1.y + t * (p2.y - p1.y)
+            )
+        }
+        
+        let xs = points.map { $0.x }
+        let ys = points.map { $0.y }
+        return CGPoint(x: xs.reduce(0, +) / CGFloat(xs.count), y: ys.reduce(0, +) / CGFloat(ys.count))
     }
 }

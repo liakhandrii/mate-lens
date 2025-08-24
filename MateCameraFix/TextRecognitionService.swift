@@ -1,11 +1,15 @@
 import UIKit
 import MLKit
 import Combine
+import NaturalLanguage // Імпортуємо фреймворк для розпізнавання мови
 
 class TextRecognitionService: ObservableObject {
     @Published var textData: [WordData] = []
     @Published var isProcessing = false
     @Published var error: String?
+
+    // Створюємо розпізнавач мови один раз для повторного використання
+    private let languageRecognizer = NLLanguageRecognizer()
 
     private enum Constants {
         static let minTextWidth: CGFloat = 15
@@ -50,34 +54,69 @@ class TextRecognitionService: ObservableObject {
             Task { [weak self] in
                 guard let self = self else { return }
 
-                let linesForTranslation = result.blocks.flatMap { $0.lines }
-                let textsToTranslate = linesForTranslation.map { $0.text }
+                let allLines = result.blocks.flatMap { $0.lines }
+                var translations = Array<String?>(repeating: nil, count: allLines.count)
                 
-                let translations = await TranslationService.shared.translateBatch(
-                    texts: textsToTranslate,
-                    from: "auto",
-                    to: "uk"
-                )
+                // Групуємо рядки та їхні індекси за мовою, визначеною для КОЖНОГО рядка
+                var linesToTranslateByLang: [String: [(index: Int, text: String)]] = [:]
+                
+                for (index, line) in allLines.enumerated() {
+                    let text = line.text
+                    self.languageRecognizer.processString(text)
+                    
+                    // Визначаємо мову рядка
+                    guard let langCode = self.languageRecognizer.dominantLanguage?.rawValue else {
+                        continue
+                    }
+                    
+                    // Не перекладаємо український текст
+                    if langCode != "uk" {
+                        linesToTranslateByLang[langCode, default: []].append((index, text))
+                    } else {
+                        // Якщо текст український, його "переклад" - це він сам
+                        translations[index] = text
+                    }
+                }
+                
+                // Робимо пакетні запити на переклад для кожної мови
+                for (lang, linesWithIndices) in linesToTranslateByLang {
+                    let texts = linesWithIndices.map { $0.text }
+                    let translatedResults = await TranslationService.shared.translateBatch(
+                        texts: texts, from: lang, to: "uk"
+                    )
+                    
+                    // Розставляємо результати перекладу по їхніх оригінальних індексах
+                    for (resultIndex, translatedText) in translatedResults.enumerated() {
+                        let originalIndex = linesWithIndices[resultIndex].index
+                        translations[originalIndex] = translatedText
+                    }
+                }
                 
                 var collectedLines: [WordData] = []
-                for (index, line) in linesForTranslation.enumerated() {
+                for (index, line) in allLines.enumerated() {
                     let originalText = line.text
-                    let translatedText = index < translations.count ? translations[index] : nil
+                    let translatedText = translations[index]
+                    
+                    // Зберігаємо переклад, тільки якщо він відрізняється від оригіналу
+                    var finalTranslatedText: String?
+                    if let translation = translatedText, translation != originalText {
+                        finalTranslatedText = translation
+                    }
                     
                     let corners = line.cornerPoints.map { $0.cgPointValue }
                     let normCorners = (corners.count == 4) ? self.normalizedQuad(corners) : nil
                     
                     let wordData = WordData(
                         text: originalText,
-                        translatedText: translatedText,
+                        translatedText: finalTranslatedText,
                         frame: line.frame,
-                        cornerPoints: normCorners
+                        cornerPoints: normCorners,
+                        originalImage: normalizedImage
                     )
                     collectedLines.append(wordData)
                 }
                 
                 let filteredLines = self.filterValidTexts(collectedLines)
-                
                 self.finish(success: true, lines: filteredLines, completion: completion)
             }
         }
@@ -86,37 +125,21 @@ class TextRecognitionService: ObservableObject {
     // MARK: - Нормалізація порядку cornerPoints
     private func normalizedQuad(_ points: [CGPoint]) -> [CGPoint] {
         guard points.count == 4 else { return points }
-        
-        // Знаходимо центр
-        let center = CGPoint(
-            x: points.map { $0.x }.reduce(0, +) / 4.0,
-            y: points.map { $0.y }.reduce(0, +) / 4.0
-        )
-        
-        // Сортуємо по куту
-        var sortedPoints = points.sorted { p1, p2 in
-            let angle1 = atan2(p1.y - center.y, p1.x - center.x)
-            let angle2 = atan2(p2.y - center.y, p2.x - center.x)
-            return angle1 < angle2
-        }
-        
-        // Знаходимо верхній лівий кут
-        var minSum = CGFloat.greatestFiniteMagnitude
+
         var topLeftIndex = 0
-        for (index, point) in sortedPoints.enumerated() {
-            let sum = point.x + point.y  // top-left має мінімальну суму
+        var minSum = CGFloat.greatestFiniteMagnitude
+        
+        for (index, point) in points.enumerated() {
+            let sum = point.x + point.y
             if sum < minSum {
                 minSum = sum
                 topLeftIndex = index
             }
         }
         
-        // Переставляємо масив так, щоб top-left була ПЕРШОЮ
-        if topLeftIndex != 0 {
-            sortedPoints = Array(sortedPoints[topLeftIndex...] + sortedPoints[..<topLeftIndex])
-        }
+        let rotatedPoints = Array(points[topLeftIndex...] + points[..<topLeftIndex])
         
-        return sortedPoints
+        return rotatedPoints
     }
     
     // MARK: - Clear
