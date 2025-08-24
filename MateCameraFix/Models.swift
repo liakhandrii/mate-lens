@@ -7,7 +7,7 @@ struct WordData {
     let translatedText: String?
     let frame: CGRect
     let cornerPoints: [CGPoint]?
-    let originalImage: UIImage? // Додаємо оригінальне зображення для аналізу
+    let originalImage: UIImage? 
 }
 
 // MARK: - Типи контенту
@@ -48,9 +48,9 @@ struct TransformedTextItem {
     let cornerPoints: [CGPoint]
     let fontSize: CGFloat
     let contentType: ContentType
-    let textColor: UIColor // Нова властивість
-    let backgroundColor: UIColor // Нова властивість
-    let estimatedWeight: UIFont.Weight // Нова властивість
+    let textColor: UIColor
+    let backgroundColor: UIColor
+    let estimatedWeight: UIFont.Weight
     let debug: TextTransformDebug?
 }
 

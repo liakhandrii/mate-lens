@@ -6,15 +6,15 @@ struct ColorAnalyzer {
     
     // MARK: - Configuration
     private enum Config {
-        static let thumbnailMaxDimension: CGFloat = 150 // Збільшено для кращої точності
-        static let edgeInsetRatio: CGFloat = 0.05 // Зменшено відступ для точнішого захоплення
-        static let minContrastRatio: CGFloat = 4.5 // WCAG AAA standard для кращої читабельності
+        static let thumbnailMaxDimension: CGFloat = 150
+        static let edgeInsetRatio: CGFloat = 0.05
+        static let minContrastRatio: CGFloat = 4.5
         static let kMeansIterations = 20
-        static let adaptiveClusters = 5 // Більше кластерів для точнішого аналізу
-        static let colorQuantizationLevel = 16 // Для гістограми
-        static let edgeSampleDensity = 3 // Щільність вибірки країв
-        static let minSaturationForColor: CGFloat = 0.15 // Мінімальна насиченість для кольорового тексту
-        static let dominanceThreshold: CGFloat = 0.6 // Поріг домінування кольору
+        static let adaptiveClusters = 5
+        static let colorQuantizationLevel = 16
+        static let edgeSampleDensity = 3
+        static let minSaturationForColor: CGFloat = 0.15
+        static let dominanceThreshold: CGFloat = 0.6
     }
     
     // MARK: - Cache з LRU
@@ -22,8 +22,8 @@ struct ColorAnalyzer {
     private static let cacheQueue = DispatchQueue(label: "coloranalyzer.cache", attributes: .concurrent)
     
     static func setupCache() {
-        colorCache.countLimit = 100 // Максимум 100 елементів
-        colorCache.totalCostLimit = 50 * 1024 * 1024 // 50MB
+        colorCache.countLimit = 100
+        colorCache.totalCostLimit = 50 * 1024 * 1024
     }
     
     private class ColorResult: NSObject {
@@ -42,11 +42,11 @@ struct ColorAnalyzer {
     
     // MARK: - Color Scheme Detection
     enum ColorScheme {
-        case standard       // Звичайний текст
-        case inverted      // Інвертований (світлий на темному)
-        case colorful      // Кольоровий текст/фон
-        case gradient      // Градієнтний фон
-        case complex       // Складний паттерн
+        case standard
+        case inverted
+        case colorful
+        case gradient
+        case complex
     }
     
     // MARK: - Public Methods
@@ -55,11 +55,9 @@ struct ColorAnalyzer {
             return (.black, .white)
         }
         
-        // Унікальний ключ для кешу з додатковими параметрами
         let imageHash = originalImage.hashValue
         let cacheKey = "\(item.text)_\(item.frame.hashValue)_\(imageHash)" as NSString
         
-        // Перевіряємо кеш
         var cachedResult: ColorResult?
         cacheQueue.sync {
             cachedResult = colorCache.object(forKey: cacheKey)

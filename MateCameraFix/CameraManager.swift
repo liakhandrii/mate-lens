@@ -26,14 +26,18 @@ class CameraManager: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
     
     private var captureSession: AVCaptureSession?  // Сесія камери
     private var photoOutput = AVCapturePhotoOutput() // Вихід для фото
+    private weak var previewLayer: AVCaptureVideoPreviewLayer? // Слабка референція на preview layer
+    private weak var previewView: UIView? // Слабка референція на view
     
     // Completion handler для захоплення фото
     private var photoCaptureCompletion: ((Bool, CameraError?) -> Void)?
     
     func setupCamera() -> UIView {
-        stopSession()
+        // Спочатку очищаємо попередню сесію
+        cleanupSession()
         
         let view = UIView(frame: UIScreen.main.bounds)
+        self.previewView = view // Зберігаємо слабку референцію
         
         let captureSession = AVCaptureSession()
         captureSession.sessionPreset = .photo  // Якість фото
@@ -52,9 +56,12 @@ class CameraManager: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
             captureSession.addInput(input)
         }
         
-        if captureSession.canAddOutput(photoOutput) {
-            captureSession.addOutput(photoOutput)
+        // Створюємо новий photoOutput замість повторного використання
+        let newPhotoOutput = AVCapturePhotoOutput()
+        if captureSession.canAddOutput(newPhotoOutput) {
+            captureSession.addOutput(newPhotoOutput)
         }
+        self.photoOutput = newPhotoOutput
         
         // Створюємо шар для превʼю відео та додаємо його у view
         let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
@@ -62,10 +69,11 @@ class CameraManager: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
         previewLayer.videoGravity = .resizeAspectFill  // Заповнення екрану
         
         view.layer.addSublayer(previewLayer)
+        self.previewLayer = previewLayer // Зберігаємо слабку референцію
         
-        // Запускаємо сесію асинхронно
-        DispatchQueue.global(qos: .userInitiated).async {
-            captureSession.startRunning()
+        // Запускаємо сесію асинхронно з weak self
+        DispatchQueue.global(qos: .userInitiated).async { [weak captureSession] in
+            captureSession?.startRunning()
         }
         
         self.captureSession = captureSession
@@ -73,17 +81,48 @@ class CameraManager: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
         return view
     }
     
+    /// Очищає всі ресурси сесії камери
+    private func cleanupSession() {
+        // Зупиняємо сесію
+        if let session = captureSession {
+            if session.isRunning {
+                session.stopRunning()
+            }
+            
+            // Видаляємо всі inputs
+            session.inputs.forEach { input in
+                session.removeInput(input)
+            }
+            
+            // Видаляємо всі outputs
+            session.outputs.forEach { output in
+                session.removeOutput(output)
+            }
+        }
+        
+        // Видаляємо preview layer з superlayer
+        previewLayer?.removeFromSuperlayer()
+        previewLayer = nil
+        
+        // Очищаємо view
+        previewView?.layer.sublayers?.removeAll()
+        previewView = nil
+        
+        // Очищаємо сесію
+        captureSession = nil
+    }
+    
     /// Зупиняє сесію камери та очищає її
     func stopSession() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.captureSession?.stopRunning()
-            self?.captureSession = nil
+            self?.cleanupSession()
         }
     }
     
     deinit {
         // При видаленні обʼєкту зупинити камеру, щоб не було витоків
-        stopSession()
+        cleanupSession()
+        photoCaptureCompletion = nil // Очищаємо completion handler
         print("CameraManager deinitialized, session stopped")
     }
     
@@ -98,6 +137,7 @@ class CameraManager: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
         // Перевіряємо, чи можемо захопити фото
         guard captureSession?.isRunning == true else {
             completion(false, .noCameraDevice)
+            photoCaptureCompletion = nil // Очищаємо handler
             return
         }
         
@@ -113,13 +153,16 @@ class CameraManager: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
     // MARK: - AVCapturePhotoCaptureDelegate
     
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        // Створюємо локальну копію completion handler і очищаємо властивість
+        let completion = photoCaptureCompletion
+        photoCaptureCompletion = nil
+        
         if let error = error {
             // Якщо сталася помилка — передаємо її у властивість error для UI
             let cameraError = CameraError.captureError(error)
             DispatchQueue.main.async { [weak self] in
                 self?.error = cameraError
-                self?.photoCaptureCompletion?(false, cameraError)
-                self?.photoCaptureCompletion = nil
+                completion?(false, cameraError)
             }
             return
         }
@@ -128,8 +171,7 @@ class CameraManager: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
             let cameraError = CameraError.noImageData
             DispatchQueue.main.async { [weak self] in
                 self?.error = cameraError
-                self?.photoCaptureCompletion?(false, cameraError)
-                self?.photoCaptureCompletion = nil
+                completion?(false, cameraError)
             }
             return
         }
@@ -138,16 +180,14 @@ class CameraManager: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
             let cameraError = CameraError.invalidImageData
             DispatchQueue.main.async { [weak self] in
                 self?.error = cameraError
-                self?.photoCaptureCompletion?(false, cameraError)
-                self?.photoCaptureCompletion = nil
+                completion?(false, cameraError)
             }
             return
         }
         
         DispatchQueue.main.async { [weak self] in
             self?.capturedImage = image
-            self?.photoCaptureCompletion?(true, nil)
-            self?.photoCaptureCompletion = nil
+            completion?(true, nil)
             print("Photo captured successfully")
         }
     }

@@ -1,14 +1,13 @@
 import UIKit
 import MLKit
 import Combine
-import NaturalLanguage // Імпортуємо фреймворк для розпізнавання мови
+import NaturalLanguage
 
 class TextRecognitionService: ObservableObject {
     @Published var textData: [WordData] = []
     @Published var isProcessing = false
     @Published var error: String?
 
-    // Створюємо розпізнавач мови один раз для повторного використання
     private let languageRecognizer = NLLanguageRecognizer()
 
     private enum Constants {
@@ -57,7 +56,6 @@ class TextRecognitionService: ObservableObject {
                 let allLines = result.blocks.flatMap { $0.lines }
                 var translations = Array<String?>(repeating: nil, count: allLines.count)
                 
-                // Групуємо рядки та їхні індекси за мовою, визначеною для КОЖНОГО рядка
                 var linesToTranslateByLang: [String: [(index: Int, text: String)]] = [:]
                 
                 for (index, line) in allLines.enumerated() {
@@ -85,7 +83,6 @@ class TextRecognitionService: ObservableObject {
                         texts: texts, from: lang, to: "uk"
                     )
                     
-                    // Розставляємо результати перекладу по їхніх оригінальних індексах
                     for (resultIndex, translatedText) in translatedResults.enumerated() {
                         let originalIndex = linesWithIndices[resultIndex].index
                         translations[originalIndex] = translatedText
@@ -97,7 +94,6 @@ class TextRecognitionService: ObservableObject {
                     let originalText = line.text
                     let translatedText = translations[index]
                     
-                    // Зберігаємо переклад, тільки якщо він відрізняється від оригіналу
                     var finalTranslatedText: String?
                     if let translation = translatedText, translation != originalText {
                         finalTranslatedText = translation
